@@ -1,0 +1,32 @@
+code: hpc-test
+name: "RegCM5 HPC Test Architect"
+description: "A custom Test Architect module adapting BMAD TEA conventions for RegCM5: numerical-reproducibility tiers, MPI/scientific/coupling correctness review, and evidence-gated PASS/CONCERNS/FAIL decisions for a Fortran HPC climate model instead of a web app."
+module_version: 1.0.0
+default_selected: false
+module_greeting: >
+  RegCM5 HPC Test Architect is ready. Matteo designs risk-based test coverage, audits regression
+  evidence, and renders PASS/CONCERNS/FAIL gate decisions for RegCM5 changes -- numerical-reproducibility
+  tiers, MPI correctness, scientific correctness, and coupling-contract review, not web-app testing.
+
+  This module is the sibling of bmad-hpc-devops: hpc-dev produces artifacts and executes changes; hpc-test
+  designs coverage, audits evidence, and adjudicates gates. Start with hpc-test-test-design for a new
+  story, or hpc-test-trace-and-gate once hpc-dev's evidence exists for a change.
+
+  Run this again at any time to reconfigure, or edit _bmad/config.yaml / config.user.yaml directly.
+
+FAST_BASELINE_ROOT:
+  prompt: "Path to the canonical baseline/profiling storage on $FAST?"
+  default: "/leonardo_scratch/fast/ICT26_MHPC_0/franco/RegCM-data"
+  result: "{value}"
+
+CI_FIXTURE:
+  prompt: "In-repo CI fixture namelist (small, plain-git baseline)?"
+  default: "Testing/ideal.in"
+  result: "{value}"
+
+agents:
+  - code: test-architect
+    name: Matteo
+    title: HPC Test Architect
+    icon: 🧪
+    description: Designs risk-based test coverage, audits regression evidence, and renders PASS/CONCERNS/FAIL gate decisions for RegCM5 changes.

@@ -1,0 +1,35 @@
+{
+  "name": "hpc-test",
+  "owner": {
+    "name": "formidablefrank"
+  },
+  "license": "",
+  "homepage": "",
+  "repository": "",
+  "keywords": ["bmad", "regcm5", "hpc", "test-architecture"],
+  "plugins": [
+    {
+      "name": "hpc-test",
+      "source": "./",
+      "description": "A custom Test Architect module adapting BMAD TEA conventions for contributing to RegCM5: numerical-reproducibility tiers, MPI/scientific/coupling correctness review, and evidence-gated PASS/CONCERNS/FAIL decisions for a Fortran HPC climate model software.",
+      "version": "1.0.0",
+      "author": {
+        "name": "formidablefrank"
+      },
+      "skills": [
+        "./hpc-test-agent-test-architect",
+        "./hpc-test-test-framework",
+        "./hpc-test-test-design",
+        "./hpc-test-regression-automate",
+        "./hpc-test-test-review",
+        "./hpc-test-nfr-assess",
+        "./hpc-test-trace-and-gate",
+        "./hpc-test-baseline-lifecycle",
+        "./hpc-test-mpi-correctness-verification",
+        "./hpc-test-scientific-correctness-verification",
+        "./hpc-test-coupling-contract-verification",
+        "./hpc-test-setup"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+# DO NOT EDIT -- overwritten on every update.
+#
+# Agent customization surface for hpc-dev-agent-gpu-porting.
+# Team overrides:     {project-root}/_bmad/custom/hpc-dev-agent-gpu-porting.toml
+# Personal overrides: {project-root}/_bmad/custom/hpc-dev-agent-gpu-porting.user.toml
+
+[agent]
+
+# --- Metadata (install-time roster contract) ---
+# Consumed by module.yaml:agents[] and `[agents.<code>]` in central config.
+
+code = "gpu-porting"
+name = "Dario"
+title = "GPU Porting Specialist"
+icon = "🚀"
+description = "Decides GPU-port candidacy from evidence, ports via do-concurrent-first-then-OpenACC-escalation, and validates against the two-tier numerical-reproducibility policy."
+agent_type = "stateless"

@@ -1,0 +1,37 @@
+{
+  "name": "hpc-dev",
+  "owner": {
+    "name": "formidablefrank"
+  },
+  "license": "",
+  "homepage": "",
+  "repository": "",
+  "keywords": ["bmad", "regcm5", "hpc"],
+  "plugins": [
+    {
+      "name": "hpc-dev",
+      "source": "./",
+      "description": "Custom BMAD agents and workflows executing RegCM5's HPC-modernization PRD: code comprehension, HPC Fortran development, profiling, GPU porting, cross-vendor build portability, containerization, and CI.",
+      "version": "1.0.0",
+      "author": {
+        "name": "formidablefrank"
+      },
+      "skills": [
+        "./hpc-dev-agent-code-comprehension",
+        "./hpc-dev-agent-hpc-software-developer",
+        "./hpc-dev-agent-profiler",
+        "./hpc-dev-agent-gpu-porting",
+        "./hpc-dev-agent-build-portability",
+        "./hpc-dev-agent-ci-container",
+        "./hpc-dev-evidence-baseline",
+        "./hpc-dev-io-scaling-diagnosis",
+        "./hpc-dev-gpu-port-candidacy",
+        "./hpc-dev-cross-vendor-build-verification",
+        "./hpc-dev-containerization-release",
+        "./hpc-dev-ci-guardrail-pipeline",
+        "./hpc-dev-documentation-modernization",
+        "./hpc-dev-setup"
+      ]
+    }
+  ]
+}
