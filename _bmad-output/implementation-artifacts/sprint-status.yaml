@@ -1,0 +1,109 @@
+# generated: 2026-07-06
+# last_updated: 2026-07-06
+# project: RegCM
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: /leonardo_scratch/fast/ICT26_MHPC_0/franco/RegCM/_bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# Action Item Status:
+#   - open: Committed during a retrospective, not yet addressed
+#   - in-progress: Actively being worked on
+#   - done: Completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# - Retrospective appends its action items to action_items; sprint-status surfaces open ones
+
+generated: 2026-07-06
+last_updated: 2026-07-06
+project: RegCM
+project_key: NOKEY
+tracking_system: file-system
+story_location: /leonardo_scratch/fast/ICT26_MHPC_0/franco/RegCM/_bmad-output/implementation-artifacts
+
+development_status:
+  epic-1: backlog
+  1-1-instrument-rrtmgs-compute-core: backlog
+  1-2-instrument-kpp-chemistry-integration: backlog
+  1-3-instrument-diagnostic-output-gather-and-write: backlog
+  1-4-baseline-profiling-run-and-published-report: backlog
+  1-5-long-running-memory-growth-investigation: backlog
+  1-6-valgrind-memory-leak-and-error-check: backlog
+  epic-1-retrospective: optional
+
+  epic-2: backlog
+  2-1-verify-and-commit-the-regression-diff-tool: backlog
+  2-2-verify-multi-process-count-comparison: backlog
+  2-3-retire-the-legacy-regression-scripts: backlog
+  2-4-establish-trusted-baselines-for-testing-fixtures: backlog
+  epic-2-retrospective: optional
+
+  epic-3: backlog
+  3-1-evaluate-async-netcdf-as-a-complementary-i-o-optimization: backlog
+  3-2-extend-i-o-timing-instrumentation-to-restart-and-clm-land-model-history: backlog
+  3-3-parallel-netcdf-write-for-diagnostic-output-opt-in: backlog
+  3-4-i-o-profiling-and-optimization-investigation-across-all-paths: backlog
+  epic-3-retrospective: optional
+
+  epic-4: backlog
+  4-1-correct-stale-precision-and-module-lifecycle-documentation: backlog
+  4-2-warn-users-about-namelist-pitfalls-and-the-clm3-5-deprecation: backlog
+  4-3-adopt-ford-for-auto-generated-api-documentation: backlog
+  epic-4-retrospective: optional
+
+  epic-5: backlog
+  5-1-gnu-and-intel-oci-docker-build-images: backlog
+  5-2-apptainer-execution-on-leonardo: backlog
+  5-3-cuda-12-gpu-enabled-container-variant: backlog
+  5-4-github-actions-build-and-test-workflow: backlog
+  epic-5-retrospective: optional
+
+  epic-6: backlog
+  6-1-fail-fast-on-invalid-namelist-file-paths: backlog
+  6-2-correct-nvhpc-compiler-identity-detection: backlog
+  epic-6-retrospective: optional
+
+  epic-7: backlog
+  7-1-verify-and-document-the-full-existing-gpu-porting-footprint: backlog
+  7-2-verify-and-document-the-existing-gpu-direct-halo-exchange: backlog
+  7-3-continue-moloch-dynamical-core-gpu-porting: backlog
+  7-4-cross-vendor-do-concurrent-parallelization-verification: backlog
+  7-5-rrtmg-gpu-porting-feasibility-investigation-with-go-no-go-checkpoint: backlog
+  7-6-configurable-gpu-target-architecture: backlog
+  7-7-statistical-reproducibility-regression-test-for-gpu-ported-code: backlog
+  7-8-gpu-porting-and-performance-guidance-document: backlog
+  epic-7-retrospective: optional
+
+  epic-8: backlog
+  8-1-oasis3-mct-field-exchange-documentation-and-regression-coverage: backlog
+  8-2-regesm-field-exchange-documentation-and-regression-coverage: backlog
+  8-3-clm-land-model-coupling-support-tier-clarification: backlog
+  8-4-cism-coupling-interface-design: backlog
+  8-5-resolve-bmi-status: backlog
+  epic-8-retrospective: optional

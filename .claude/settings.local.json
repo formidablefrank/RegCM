@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bmad-loop --version)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(uv tool *)",
+      "Bash(uv run *)",
+      "Bash(bmad-loop init *)",
+      "Bash(bmad-loop validate *)"
+    ]
+  }
+}

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>RegCM5 Epic Review — 2026-07-05</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #0f1115;
+    --panel: #171a21;
+    --text: #e8e6e1;
+    --muted: #9aa0ab;
+    --rule: #2a2f3a;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f6f4ef;
+      --panel: #ffffff;
+      --text: #1c1c1c;
+      --muted: #5b6270;
+      --rule: #e1ddd3;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 2.5rem 1.25rem 4rem;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    line-height: 1.55;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  header { text-align: center; margin-bottom: 2.5rem; }
+  header h1 {
+    font-size: 1.5rem;
+    letter-spacing: 0.02em;
+    margin: 0 0 0.4rem;
+  }
+  header p { color: var(--muted); margin: 0; font-size: 0.95rem; }
+  .cast {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.6rem 1.1rem;
+    margin: 1.4rem 0 0;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .cast span { white-space: nowrap; }
+  .scene {
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    padding: 1.6rem 0;
+    margin: 2rem 0;
+    text-align: center;
+    font-style: italic;
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+  .line { display: flex; gap: 0.85rem; margin: 1.35rem 0; align-items: baseline; }
+  .icon {
+    flex: 0 0 auto;
+    width: 1.9rem;
+    text-align: center;
+    font-size: 1.15rem;
+    transform: translateY(1px);
+  }
+  .who {
+    font-weight: 700;
+    margin-right: 0.35rem;
+  }
+  .say { flex: 1; }
+  .lorenzo .who { color: #5aa9e6; }
+  .dario .who { color: #e07856; }
+  .giacomo .who { color: #4fbf8e; }
+  .matteo .who { color: #c99a3f; }
+  .john .who { color: #b17fd6; }
+  .beat { text-align: center; color: var(--muted); font-size: 0.85rem; margin: 1.8rem 0; }
+  footer {
+    margin-top: 3rem;
+    padding-top: 1.4rem;
+    border-top: 1px solid var(--rule);
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.88rem;
+  }
+  .outcome {
+    margin-top: 2rem;
+    padding: 1rem 1.3rem;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    font-size: 0.92rem;
+  }
+  .outcome b { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>RegCM5 HPC Modernization — Epic Review</h1>
+  <p>Party Mode · 2026-07-05 · franco's own bench, pulled in for one round</p>
+  <div class="cast">
+    <span>📈 Lorenzo — Profiler</span>
+    <span>⚡ Dario — GPU Porting</span>
+    <span>🐳 Giacomo — CI/Container</span>
+    <span>🧪 Matteo — Test Architect</span>
+    <span>📋 John — Product Manager</span>
+  </div>
+</header>
+
+<div class="scene">
+  Eight epics, thirty-eight FRs, reordered four times already.
+  The room is asked to sanity-check the fifth and (maybe) final order
+  before franco signs off with a <em>C</em>.
+</div>
+
+<div class="line lorenzo">
+  <div class="icon">📈</div>
+  <div><span class="who">Lorenzo:</span><span class="say"> Epic 1 first. Good. If Epic 7 cites a hotspot number that didn't come out of my <code>perf</code> run or Nsight, I will personally rerun it and be smug about it.</span></div>
+</div>
+
+<div class="line dario">
+  <div class="icon">⚡</div>
+  <div><span class="who">Dario:</span><span class="say"> Nobody's disputing Epic 1, Lorenzo, put the flame graph down for a second. I want to know why my epic — Epic 7, the actual GPU work — is sitting behind Giacomo's containers. What am I shipping in an NVHPC container in Epic 5 that's worth shipping before Epic 7 even verifies the footprint?</span></div>
+</div>
+
+<div class="line giacomo">
+  <div class="icon">🐳</div>
+  <div><span class="who">Giacomo:</span><span class="say"> Because I don't need your verification, Dario. GNU and Intel paths are already stable, and the NVHPC image just compiles whatever's already merged — the four hotspots, MOLOCH so far. I'm not waiting on your go/no-go on RRTMG to build a container.</span></div>
+</div>
+
+<div class="line dario">
+  <div class="icon">⚡</div>
+  <div><span class="who">Dario:</span><span class="say"> Sure, but AD-7 says every native NVHPC build tests both <code>mem:managed</code> and <code>mem:stdpar</code>. If you bake a container before that matrix is settled—</span></div>
+</div>
+
+<div class="line giacomo">
+  <div class="icon">🐳</div>
+  <div><span class="who">Giacomo:</span><span class="say"> —it's already settled, AD-22 nailed the runtime default months before this conversation. Explicit device memory, no managed/unified. Read the spine.</span></div>
+</div>
+
+<div class="beat">— point to Giacomo —</div>
+
+<div class="line matteo">
+  <div class="icon">🧪</div>
+  <div><span class="who">Matteo:</span><span class="say"> Can I drag this back to something that matters? Putting CI in Epic 5, ahead of GPU in Epic 7, doesn't buy you what franco might think it buys. FR-32 scopes GitHub CI to compile-only for NVHPC — no <code>do concurrent</code> parallelization check, no GPU execution. So when Epic 7 lands, a green check still tells you nothing about whether the GPU work actually works. AD-4 stands no matter what order these epics ship in: Slurm validation on <code>boost_usr_prod</code> is the only real gate for Epic 7. Order it however you like — don't let early-CI lull anyone into thinking it covers GPU acceptance.</span></div>
+</div>
+
+<div class="line john">
+  <div class="icon">📋</div>
+  <div><span class="who">John:</span><span class="say"> Since we're re-litigating order for the fourth time — franco, can I ask what you're actually optimizing for? Every epic here serves the same one person, regcm5-dev, in a different hat. The one placement I'd push on: Epic 8, Coupling, dead last. OASIS3-MCT and REGESM aren't hypothetical — they're live integrators today. The PRD says Phase 4 is sequenced last "by priority choice, not necessity" — I just want to hear that's still true and not inertia from how the PRD happened to list features.</span></div>
+</div>
+
+<div class="line lorenzo">
+  <div class="icon">📈</div>
+  <div><span class="who">Lorenzo:</span><span class="say"> Don't let him make this about jobs-to-be-done, franco, it's HPC infrastructure, not a SaaS onboarding flow.</span></div>
+</div>
+
+<div class="line john">
+  <div class="icon">📋</div>
+  <div><span class="who">John:</span><span class="say"> Everything's a job to be done, Lorenzo, yours just has a flame graph attached.</span></div>
+</div>
+
+<div class="beat">— franco: "yes the order is right" —</div>
+
+<div class="line john">
+  <div class="icon">📋</div>
+  <div><span class="who">John:</span><span class="say"> Good — that's all I needed. Wasn't fighting for a reorder, just didn't want "last" to be an accident of document structure.</span></div>
+</div>
+
+<div class="line lorenzo">
+  <div class="icon">📈</div>
+  <div><span class="who">Lorenzo:</span><span class="say"> Then we're done here. Epic 1 still first, still mine.</span></div>
+</div>
+
+<div class="line giacomo">
+  <div class="icon">🐳</div>
+  <div><span class="who">Giacomo:</span><span class="say"> And my containers still don't wait on Dario's verdict.</span></div>
+</div>
+
+<div class="line dario">
+  <div class="icon">⚡</div>
+  <div><span class="who">Dario:</span><span class="say"> For now.</span></div>
+</div>
+
+<div class="line matteo">
+  <div class="icon">🧪</div>
+  <div><span class="who">Matteo:</span><span class="say"> Order's fine. Just don't forget what I said when Epic 7 shows up with a green CI check and someone tries to call it done.</span></div>
+</div>
+
+<div class="outcome">
+  <b>Outcome:</b> Epic order confirmed as-is — Profiling &amp; Memory Baseline (1),
+  Automated Regression Infrastructure (2), I/O Scaling (3), Documentation (4),
+  Containers &amp; CI Gate (5), Namelist &amp; Build Hardening (6),
+  Selective GPU Acceleration (7), External Coupling (8). Coupling stays last —
+  a deliberate priority call, not a document-order accident. Standing reminder from
+  Matteo: a green CI check on Epic 5 never substitutes for Slurm validation on Epic 7.
+</div>
+
+<footer>
+  RegCM5 HPC Modernization · bmad-create-epics-and-stories · Step 2 review
+</footer>
+
+</div>
+</body>
+</html>
