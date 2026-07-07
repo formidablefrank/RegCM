@@ -556,7 +556,7 @@ NVHPC build verification (compilation only) runs in GitHub Actions where a suita
 - regcm5-dev is the sole scientific reviewer and sign-off authority for this codebase (per the governing project context); this program does not introduce or assume a formal review board.
 
 **HPC platform guardrail**
-- Intel-compiled work is validated on `dcgp_usr_prod` / `dcgp_qos_dbg` (account `ICT26_MHPC_0`); NVHPC-compiled work on `boost_usr_prod` / `boost_qos_dbg` (account `ICT26_MHPC`). FR-4's baseline explicitly spans both, since the CPU-vendor and accelerator build paths are validated on physically different partitions.
+- Intel and GNU-compiled work is validated on `dcgp_usr_prod` partition with `dcgp_qos_dbg` QoS and account `ICT26_MHPC`; NVHPC-compiled work on `boost_usr_prod` partition with `boost_qos_dbg` QoS and account `ICT26_MHPC_0`. FR-4's baseline explicitly spans both, since the CPU-vendor and accelerator build paths are validated on physically different partitions.
 - Login-node activity stays limited to planning and light tasks; all profiling and regression runs go through Slurm with conservative resource requests, per the cluster's fair-use policy.
 
 **Container/CI guardrail**

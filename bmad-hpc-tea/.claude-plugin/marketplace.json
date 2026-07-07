@@ -1,11 +1,11 @@
 {
   "name": "hpc-test",
   "owner": {
-    "name": "formidablefrank"
+    "name": "J Franco Ray"
   },
-  "license": "",
-  "homepage": "",
-  "repository": "",
+  "license": "MIT",
+  "homepage": "https://github.com/formidablefrank/bmad-hpc-tea",
+  "repository": "https://github.com/formidablefrank/bmad-hpc-tea",
   "keywords": ["bmad", "regcm5", "hpc", "test-architecture"],
   "plugins": [
     {
@@ -14,7 +14,7 @@
       "description": "A custom Test Architect module adapting BMAD TEA conventions for contributing to RegCM5: numerical-reproducibility tiers, MPI/scientific/coupling correctness review, and evidence-gated PASS/CONCERNS/FAIL decisions for a Fortran HPC climate model software.",
       "version": "1.0.0",
       "author": {
-        "name": "formidablefrank"
+        "name": "J Franco Ray"
       },
       "skills": [
         "./hpc-test-agent-test-architect",

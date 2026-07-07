@@ -1,13 +1,5 @@
 document_output_language: English
 output_folder: '{project-root}/_bmad-output'
-bmad-loop:
-  name: BMAD Loop Skills
-  description: 'Automation-mode skills driven by the bmad-loop orchestrator: interactive
-    escalation resolution (bmad-loop-resolve) and deferred-work sweep triage (bmad-loop-sweep)
-    — the inner dev primitive (which self-reviews and commits) is the upstream bmad-dev-auto
-    skill'
-  version: 0.8.0
-  default_selected: false
 hpc-dev:
   name: RegCM5 HPC DevOps
   description: 'Custom BMAD agents and workflows executing RegCM5''s HPC-modernization
@@ -30,3 +22,11 @@ hpc-test:
   default_selected: false
   FAST_BASELINE_ROOT: /leonardo_scratch/fast/ICT26_MHPC_0/franco/RegCM-data
   CI_FIXTURE: Testing/ideal.in
+bmad-loop:
+  name: BMAD Loop Skills
+  description: 'Automation-mode skills driven by the bmad-loop orchestrator: interactive
+    escalation resolution (bmad-loop-resolve) and deferred-work sweep triage (bmad-loop-sweep)
+    — the inner dev primitive (which self-reviews and commits) is the upstream bmad-dev-auto
+    skill'
+  version: 0.8.1
+  default_selected: false

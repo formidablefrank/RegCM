@@ -1,0 +1,23 @@
+# Team override for bmad-agent-dev (Amelia). Appends routing entries into the
+# hpc-dev/hpc-test custom modules to her menu -- merges by `code`; her existing
+# DS/QD/QA/CR/SP/CS/ER entries are untouched.
+
+[[agent.menu]]
+code = "HC"
+description = "Explain RegCM5 source or trace a call graph (never modifies code)"
+skill = "hpc-dev-agent-code-comprehension"
+
+[[agent.menu]]
+code = "HD"
+description = "Implement a RegCM5 change with HPC/Fortran-specific discipline"
+skill = "hpc-dev-agent-hpc-software-developer"
+
+[[agent.menu]]
+code = "HG"
+description = "Evaluate/port/validate a routine for GPU acceleration"
+skill = "hpc-dev-gpu-port-candidacy"
+
+[[agent.menu]]
+code = "HT"
+description = "Render a PASS/CONCERNS/FAIL gate decision for a RegCM5 change"
+skill = "hpc-test-trace-and-gate"

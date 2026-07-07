@@ -1,0 +1,10 @@
+# Team override for bmad-create-story. Nudges story drafts to name the specific
+# hpc-dev/hpc-test skill in Dev Notes when one clearly applies, per
+# project-context.md's "Custom BMAD Tooling & Skill Routing" table (already
+# loaded via this skill's default persistent_facts glob).
+
+[workflow]
+
+persistent_facts = [
+  "When a drafted story clearly maps to a specific hpc-dev-*/hpc-test-* skill (see project-context.md's Custom BMAD Tooling & Skill Routing table), name that skill explicitly in the story's Dev Notes section rather than leaving routing to be re-derived at implementation time.",
+]

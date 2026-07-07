@@ -45,7 +45,7 @@ No CI pipeline (no `.github/workflows`), no linter/formatter config — style en
 - `--enable-clm45`: builds the coupled RegCM5–CLM4.5 executable
 - `--enable-pnetcdf`: enables parallel NetCDF I/O
 - `--enable-async-netcdf`: enables overlapping disk writes with computation
-- Source: `_bmad-source/regcm5-optimization.pdf` (Master's thesis, GPU porting and optimization of RegCM5, ICTP/SISSA/CINECA, 2024–2026), benchmarked on NVHPC 24.5, CUDA 12.4, HPC-X OpenMPI 2.19 — an earlier environment than the current target versions above
+- Source: `_bmad-source/implementation/regcm5-optimization-thesis.pdf` (Master's thesis, GPU porting and optimization of RegCM5, ICTP/SISSA/CINECA, 2024–2026), benchmarked on NVHPC 24.5, CUDA 12.4, HPC-X OpenMPI 2.19 — an earlier environment than the current target versions above
 
 ## Critical Implementation Rules
 
@@ -55,10 +55,11 @@ No CI pipeline (no `.github/workflows`), no linter/formatter config — style en
 - When running Python scripts, load the Python module first using `module load python/3.11.7`
 - Consult the `$HPCDOCS` directory before searching the web for cluster-specific questions (modules, compilers, paths, policy)
 - Work occurs on a shared login node, subject to resource sharing and fair use policy; enforced limits prevent any single user from consuming the whole node
-- Confine login-node activity to planning and light tasks; submit larger or long-running computation as a Slurm job on compute nodes
-- Request conservative resource limits in Slurm job submissions
-- For running Slurm jobs with programs compiled with Intel, use `dcgp_usr_prod` partition, `dcgp_qos_dbg` QoS with account `ICT26_MHPC_0`
-- For running Slurm jobs with programs compiled with NVHPC, use `boost_usr_prod` partition, `boost_qos_dbg` QoS with account `ICT26_MHPC`
+- Confine login-node activity to planning and light tasks; submit larger job or long-running process as a Slurm job on compute nodes
+- Request conservative resource limits in Slurm job submissions. If walltime requested is at most 24 hours then set QoS to `normal`
+- For running Slurm jobs with programs compiled with Intel, use `dcgp_usr_prod` partition, `dcgp_qos_dbg` QoS with account `ict26_mhpc`
+- For running Slurm jobs with programs compiled with NVHPC, use `boost_usr_prod` partition, `boost_qos_dbg` QoS with account `ict26_mhpc_0`
+- Let the user review the Slurm script first before submitting
 
 **Communication style:**
 - Write in a register consistent with scholarly books and peer-reviewed journal articles
@@ -96,7 +97,7 @@ No CI pipeline (no `.github/workflows`), no linter/formatter config — style en
 - Automatic (local, entry-sized) array allocation inside a procedure is unsupported once that procedure compiles to a device kernel — allocate in the caller and pass the array as an argument
 - A helper procedure contained inside another procedure must move to module scope before the compiler can generate a device kernel for it
 - A whole-array or row-slice initialization idiom (e.g. `array(c,:) = 0._rk8`) can be lowered by `nvfortran` into a vectorized memset (`__c_mset16_avx`) that appears in a profile as an unattributed hotspot with no call stack — replace it with an explicit element-wise loop under `!$acc loop seq`, as already done in `mod_clm_hydrology2.F90`
-- Source: `_bmad-source/regcm5-optimization.pdf`, Chapters 2–3
+- Source: `_bmad-source/implementation/regcm5-optimization-thesis.pdf`, Chapters 2–3
 
 **Scientific correctness is a hard constraint, not a style preference:**
 - Preserve physical meaning of schemes, namelist behavior, units, boundary conditions
@@ -138,7 +139,7 @@ No CI pipeline (no `.github/workflows`), no linter/formatter config — style en
 - Multi-process-count comparison is required whenever a change touches stencil/halo code (Architecture & Parallelism Rules) — a single-rank (`nproc=1`) comparison can pass while a decomposition bug at tile boundaries still exists
 
 **A documented reproducibility diagnostic workflow exists for CPU-vs-GPU comparison, but it is not yet in this repository:**
-- `_bmad-source/regcm5-optimization.pdf` (Appendix B) describes a three-script NCO/Python pipeline — concatenate daily NetCDF output, compute the GPU-minus-CPU difference field with `ncdiff`, then compute mean absolute difference (MAD), root-mean-square error (RMSE), and their scale-relative forms (rMAD, rRMSE) per hour and per day, plus geographic error maps. Porting these three scripts into the repository (e.g. under `Tools/Scripts/`) would close part of the automated-regression-tooling gap noted above, specifically for GPU-port verification
+- `_bmad-source/implementation/regcm5-optimization-thesis.pdf` (Appendix B) describes a three-script NCO/Python pipeline — concatenate daily NetCDF output, compute the GPU-minus-CPU difference field with `ncdiff`, then compute mean absolute difference (MAD), root-mean-square error (RMSE), and their scale-relative forms (rMAD, rRMSE) per hour and per day, plus geographic error maps. Porting these three scripts into the repository (e.g. under `Tools/Scripts/`) would close part of the automated-regression-tooling gap noted above, specifically for GPU-port verification
 - For CPU-only code changes, bit-exact reproduction remains the default expectation (above). For CPU-to-GPU porting specifically, the established precedent in this project is **statistical**, not bitwise, reproducibility: after a 7-day run, the thesis measured relative divergence below 0.1% for near-surface air temperature and surface pressure, and below 5% for near-surface specific humidity. Treat these as reference bounds — a new GPU port should be checked against comparably small, quantified divergence, not assumed correct from a successful compile
 - The NVHPC `autocompare` option (`--enable-openacc-debug`, see Technology Stack) offers an automatic first-pass host-versus-device comparison at build time and should be tried before hand-building an NCO-based diff
 
@@ -190,7 +191,7 @@ No CI pipeline (no `.github/workflows`), no linter/formatter config — style en
 - Problem size: domain decomposition, rank/thread layout
 - Measurement: wall time, hotspot profile, memory bandwidth evidence where available
 - Regression comparison against a trusted baseline output (manual NCO/CDO — no automated tool exists yet)
-- Documented profiling method: `perf record --call-graph dwarf` (needs `-g` debug symbols) with a flame-graph rendering (Brendan Gregg's `FlameGraph` scripts) identifies hot call stacks; NVIDIA Nsight Systems recovers attribution `perf` cannot, since a compiler-runtime symbol (e.g. `nvfortran`'s `__c_mset16_avx`) can appear with no call stack under `perf`; the `-Minfo=accel` compiler flag reports exactly what a given region offloaded and what data movement it generated (see `_bmad-source/regcm5-optimization.pdf`, Appendix A)
+- Documented profiling method: `perf record --call-graph dwarf` (needs `-g` debug symbols) with a flame-graph rendering (Brendan Gregg's `FlameGraph` scripts) identifies hot call stacks; NVIDIA Nsight Systems recovers attribution `perf` cannot, since a compiler-runtime symbol (e.g. `nvfortran`'s `__c_mset16_avx`) can appear with no call stack under `perf`; the `-Minfo=accel` compiler flag reports exactly what a given region offloaded and what data movement it generated (see `_bmad-source/implementation/regcm5-optimization-thesis.pdf`, Appendix A)
 
 **"Scientific review" means explicit human sign-off, not a formal board:**
 - In this project that means sign-off from whoever owns the physics being touched (in practice, franco) — don't stall waiting for a review process that doesn't exist, and don't treat its absence as permission to skip the check
@@ -210,13 +211,36 @@ No CI pipeline (no `.github/workflows`), no linter/formatter config — style en
 - Don't `allocate`/`deallocate` scratch arrays inside a time-step or inner loop — the existing `init_mod_*`/`release_mod_*` lifecycle exists precisely so workspace arrays are allocated once and reused; repeated dynamic allocation in a hot path is a classic, easy-to-miss regression
 - Don't delete a `#ifdef DEBUG` block because it looks unused in your local build — it's conditionally compiled, not dead code
 - Don't move a helper procedure to module scope, or change its `pure`/`!$acc routine seq` annotations, without checking whether that change is load-bearing for GPU-offload kernel generation (Language & Numerical Rules) — in `getcape_new`/`heatindex`/`interp1d_r8` these are not stylistic, they are required for the device kernel to compile
-- The "no working regression tool" note above (Testing Rules) applies to general CPU-only code-change regression. For CPU-vs-GPU divergence specifically, a documented workflow exists in `_bmad-source/regcm5-optimization.pdf` (not yet ported into this repository) with quantified precedent bounds — don't conflate the two gaps
+- The "no working regression tool" note above (Testing Rules) applies to general CPU-only code-change regression. For CPU-vs-GPU divergence specifically, a documented workflow exists in `_bmad-source/implementation/regcm5-optimization-thesis.pdf` (not yet ported into this repository) with quantified precedent bounds — don't conflate the two gaps
 
 **Edge cases:**
 - Namelist inputs are not defensively parsed — several `Testing/*.in` fixtures ship with literal placeholder paths (e.g. `/set/this/to/where/...`) expected to be edited before use; don't assume malformed/unedited namelist input fails gracefully, and don't "fix" a placeholder path by guessing a real one
 
 **Security:**
 - Not a meaningful attack surface in the usual sense — this is a batch HPC scientific model, not a network-facing service. The closest analogue is the Python tooling under `Tools/Scripts/` that parses external data files (namelists, NetCDF, GRIB) — treat malformed input files as a robustness/correctness concern, not a security one, unless a specific script is shown to shell out or eval untrusted content
+
+---
+
+## Custom BMAD Tooling & Skill Routing
+
+Two custom BMAD modules exist for this program, registered in `_bmad/config.yaml`/`_bmad/module-help.csv` exactly like `bmm`/`bmb`/`tea`: `hpc-dev` (`bmad-hpc-devops/`) produces artifacts and executes changes; `hpc-test` (`bmad-hpc-tea/`) designs coverage, audits evidence, and renders gate decisions. **Before implementing a RegCM5 change generically, check this table — if a specialized skill exists for the domain, invoke it instead of ad hoc implementation:**
+
+| Change touches... | Use | Persona |
+| --- | --- | --- |
+| Understanding existing code / "what does X do" | `hpc-dev-agent-code-comprehension` | Gaspare |
+| General RegCM5 Fortran/HPC implementation | `hpc-dev-agent-hpc-software-developer` | Jacopo |
+| Profiling / establishing a baseline | `hpc-dev-evidence-baseline` | Lorenzo |
+| GPU-port candidacy or porting | `hpc-dev-gpu-port-candidacy` | Dario |
+| Compiler/build-matrix work | `hpc-dev-cross-vendor-build-verification` | Franco |
+| I/O scaling or bottleneck diagnosis | `hpc-dev-io-scaling-diagnosis` | Franco |
+| Containers or the CI pipeline | `hpc-dev-containerization-release` / `hpc-dev-ci-guardrail-pipeline` | Giacomo |
+| Documentation modernization | `hpc-dev-documentation-modernization` | Gaspare (flags) / Jacopo (writes) |
+| Any change needing a merge/gate verdict | `hpc-test-trace-and-gate` | Matteo |
+| MPI- or decomposition-touching change | `hpc-test-mpi-correctness-verification` | Matteo |
+| Physics- or numerics-touching change | `hpc-test-scientific-correctness-verification` | Matteo |
+| External-coupling change (OASIS3-MCT/REGESM/CLM/BMI/CISM) | `hpc-test-coupling-contract-verification` | Matteo |
+
+A drafted story that clearly maps to one of these should name the specific skill in its Dev Notes, not leave routing to be re-derived at implementation time.
 
 ---
 
@@ -251,4 +275,4 @@ Before proposing or implementing RegCM5 changes:
 - Review quarterly for outdated rules
 - Remove rules that become obvious over time
 
-Last Updated: 2026-07-04
+Last Updated: 2026-07-06

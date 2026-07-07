@@ -1,20 +1,20 @@
 {
   "name": "hpc-dev",
   "owner": {
-    "name": "formidablefrank"
+    "name": "J Franco Ray"
   },
-  "license": "",
-  "homepage": "",
-  "repository": "",
+  "license": "MIT",
+  "homepage": "https://github.com/formidablefrank/bmad-hpc-devops",
+  "repository": "https://github.com/formidablefrank/bmad-hpc-devops",
   "keywords": ["bmad", "regcm5", "hpc"],
   "plugins": [
     {
       "name": "hpc-dev",
       "source": "./",
-      "description": "Custom BMAD agents and workflows executing RegCM5's HPC-modernization PRD: code comprehension, HPC Fortran development, profiling, GPU porting, cross-vendor build portability, containerization, and CI.",
+      "description": "Custom BMAD agents and workflows for modernizing software development workflows for RegCM5 climate model: code comprehension, HPC Fortran development, profiling, GPU porting, cross-vendor build portability, containerization, and CI.",
       "version": "1.0.0",
       "author": {
-        "name": "formidablefrank"
+        "name": "J Franco Ray"
       },
       "skills": [
         "./hpc-dev-agent-code-comprehension",

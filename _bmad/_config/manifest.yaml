@@ -1,0 +1,37 @@
+installation:
+  version: 6.10.0
+  installDate: 2026-07-07T02:46:24.399Z
+  lastUpdated: 2026-07-07T12:55:35.822Z
+modules:
+  - name: core
+    version: 6.10.0
+    installDate: 2026-07-07T02:46:23.408Z
+    lastUpdated: 2026-07-07T12:55:35.794Z
+    source: built-in
+    npmPackage: null
+    repoUrl: null
+  - name: bmm
+    version: 6.10.0
+    installDate: 2026-07-07T02:46:24.303Z
+    lastUpdated: 2026-07-07T12:55:35.801Z
+    source: built-in
+    npmPackage: null
+    repoUrl: null
+  - name: hpc-dev
+    version: 1.0.0
+    installDate: 2026-07-07T02:47:14.580Z
+    lastUpdated: 2026-07-07T12:55:35.810Z
+    source: custom
+    npmPackage: null
+    repoUrl: null
+    localPath: /leonardo_scratch/fast/ICT26_MHPC_0/franco/RegCM/bmad-hpc-devops
+  - name: hpc-test
+    version: null
+    installDate: 2026-07-07T02:48:10.403Z
+    lastUpdated: 2026-07-07T12:55:35.821Z
+    source: unknown
+    npmPackage: null
+    repoUrl: null
+    localPath: /leonardo_scratch/fast/ICT26_MHPC_0/franco/RegCM/bmad-hpc-tea
+ides:
+  - claude-code
