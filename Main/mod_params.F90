@@ -1415,11 +1415,10 @@ module mod_params
       nspgx = max(6,nspgx)
     end if
     if ( idynamic == 3 ) then
-      if ( nspgd /= nspgx ) then
-        if ( myid == italk ) then
-          write(stderr,*) 'Using nspgx value for nspgd in MOLOCH code'
-        end if
-        nspgd = nspgx
+      nspgx = 11
+      nspgd = 11
+      if ( myid == italk ) then
+        write(stdout,*) 'Using nspgx == 11 in MOLOCH code'
       end if
     end if
 
@@ -2220,10 +2219,7 @@ module mod_params
     ! Calculate boundary areas per processor
     !
     call setup_boundaries(cross,cross,ba_cr)
-    if ( idynamic == 3 ) then
-      call setup_boundaries(dot,cross,ba_ut)
-      call setup_boundaries(cross,dot,ba_vt)
-    else
+    if ( idynamic /= 3 ) then
       call setup_boundaries(dot,dot,ba_dt)
     end if
 
@@ -2231,13 +2227,15 @@ module mod_params
     call allocate_v2dbound(xtsb,cross)
     call allocate_v3dbound(xtb,kz,cross)
     call allocate_v3dbound(xqb,kz,cross)
-    call allocate_v3dbound(xub,kz,dot)
-    call allocate_v3dbound(xvb,kz,dot)
+    call allocate_v3dbound(dub,kz,dot)
+    call allocate_v3dbound(dvb,kz,dot)
     if ( idynamic == 2 ) then
       call allocate_v3dbound(xppb,kz,cross)
       call allocate_v3dbound(xwwb,kzp1,cross)
     else if ( idynamic == 3 ) then
       call allocate_v3dbound(xpaib,kz,cross)
+      call allocate_v3dbound(xub,kz,cross)
+      call allocate_v3dbound(xvb,kz,cross)
     end if
 
     if ( myid == italk ) then
@@ -2311,10 +2309,12 @@ module mod_params
       end if
 
       write(stdout,*) 'Physical Parameterizations'
-      write(stdout,'(a,i2)') '  Lateral Boundary conditions : ', iboudy
-      write(stdout,'(a,i2)') '  Semi-Lagrangian Advection   : ', isladvec
-      if ( isladvec == 1 ) then
-        write(stdout,'(a,i2)') '  QMSL algorithm used         : ', iqmsl
+      if ( idynamic /= 3 ) then
+        write(stdout,'(a,i2)') '  Lateral Boundary conditions : ', iboudy
+        write(stdout,'(a,i2)') '  Semi-Lagrangian Advection   : ', isladvec
+        if ( isladvec == 1 ) then
+          write(stdout,'(a,i2)') '  QMSL algorithm used         : ', iqmsl
+        end if
       end if
       if ( any(icup == -1) ) then
         icup(:) = -1
@@ -2349,11 +2349,13 @@ module mod_params
       write(stdout,*) 'Boundary Pameterizations'
       write(stdout,'(a,i3)') '  Num. of bndy points cross  : ', nspgx
       write(stdout,'(a,i3)') '  Num. of bndy points dot    : ', nspgd
-      write(stdout,'(a,f9.6)') '  Nudge value high range     : ', high_nudge
-      write(stdout,'(a,f9.6)') '  Nudge value medium range   : ', medium_nudge
-      write(stdout,'(a,f9.6)') '  Nudge value low range      : ', low_nudge
-      write(stdout,'(a,f9.6)') '  Nm paramter                : ', bdy_nm
-      write(stdout,'(a,f9.6)') '  Dm paramter                : ', bdy_dm
+      if ( idynamic /= 3 ) then
+        write(stdout,'(a,f9.6)') '  Nudge value high range     : ', high_nudge
+        write(stdout,'(a,f9.6)') '  Nudge value medium range   : ', medium_nudge
+        write(stdout,'(a,f9.6)') '  Nudge value low range      : ', low_nudge
+        write(stdout,'(a,f9.6)') '  Nm paramter                : ', bdy_nm
+        write(stdout,'(a,f9.6)') '  Dm paramter                : ', bdy_dm
+      end if
 #endif
 #ifdef CLM
       write(stdout,*) 'CLM Pameterizations'
@@ -2507,11 +2509,6 @@ module mod_params
       call allocate_mod_slabocean
       call init_slabocean(sfs,mddom%lndcat,fsw,flw,mddom%xlon,mddom%xlat)
     end if
-    !
-    ! Setup Boundary condition routines.
-    !
-    call setup_bdycon
-    if ( ichem == 1 ) call setup_che_bdycon
 
     if ( idynamic == 2 ) then
       call make_reference_atmosphere
@@ -2519,6 +2516,11 @@ module mod_params
     else if ( idynamic == 3 ) then
       call compute_moloch_static
     end if
+    !
+    ! Setup Boundary condition routines.
+    !
+    call setup_bdycon
+    if ( ichem == 1 ) call setup_che_bdycon
 
     if ( iboudy < 0 .or. iboudy > 7 ) then
       call fatal(__FILE__,__LINE__, &
