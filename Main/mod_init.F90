@@ -61,8 +61,6 @@ module mod_init
   public :: init
 
   real(rkx), parameter :: mo_zfilt_fac = 0.8_rkx
-  real(rkx), parameter :: tlp = 50.0_rkx
-  real(rkx), parameter :: ts00 = 288.0_rkx
 
   contains
 
@@ -79,10 +77,12 @@ module mod_init
     implicit none
     integer(ik4) :: i, j, k, n
     real(rkx) :: rdnnsg
-    real(rkx) :: zzi, zfilt
+    real(rkx) :: zzi, zdgz, zh
     real(rkx), dimension(kzp1) :: ozprnt
     real(rkx), dimension(:,:,:), pointer :: tccn => null( )
     real(rk8) :: t_io0
+    real(rk8) :: np, meanz
+    real(rk8), dimension(kz) :: gmeanz
 #ifdef DEBUG
     character(len=dbgslen) :: subroutine_name = 'init'
     integer(ik4), save :: idindx = 0
@@ -155,12 +155,13 @@ module mod_init
         call psc2psd(sfs%psb,sfs%psdotb)
         call exchange(sfs%psdotb,idif,jde1,jde2,ide1,ide2)
       else
-        do concurrent ( j = jde1:jde2, i = ice1:ice2, k = 1:kz )
+        do concurrent ( j = jde1gb:jde2gb, i = ice1ga:ice2ga, k = 1:kz )
           mo_atm%u(j,i,k) = dub%b0(j,i,k)
         end do
-        do concurrent ( j = jce1:jce2, i = ide1:ide2, k = 1:kz )
+        do concurrent ( j = jce1ga:jce2ga, i = ide1gb:ide2gb, k = 1:kz )
           mo_atm%v(j,i,k) = dvb%b0(j,i,k)
         end do
+        call uvstagtox(mo_atm%u,mo_atm%v,mo_atm%ux,mo_atm%vx)
         do concurrent ( j = jce1:jce2, i = ice1:ice2, k = 1:kz )
           mo_atm%t(j,i,k) = xtb%b0(j,i,k)
           mo_atm%pai(j,i,k) = xpaib%b0(j,i,k)
@@ -196,8 +197,11 @@ module mod_init
         do concurrent ( j = jce1:jce2, i = ice1:ice2, k = 1:kz )
           mo_atm%rho(j,i,k) = mo_atm%p(j,i,k)/(rgas* mo_atm%t(j,i,k))
         end do
+        zh = 0.5_rkx*mo_dzita
         do concurrent ( j = jce1:jce2, i = ice1:ice2 )
-          sfs%psa(j,i) = xpsb%b0(j,i)
+          zdgz = egrav*md_zeta(zh,mddom%ht(j,i),mo_ztop,mo_h,mo_a0)
+          sfs%psa(j,i) = mo_atm%p(j,i,kz) * &
+                exp(zdgz/(rgas*mo_atm%tvirt(j,i,kz)))
         end do
         do concurrent ( j = jce1:jce2, i = ice1:ice2, k = 1:kz )
           mo_atm%qs(j,i,k) = pfwsat(mo_atm%t(j,i,k),mo_atm%p(j,i,k))
@@ -1011,20 +1015,23 @@ module mod_init
     ! Initialize the Surface Model
     !
     if ( idynamic == 3 ) then
-      if ( mo_nzfilt > 0 ) then
-        ! Sponge layer at the top of the atmosphere
-        zfilt = (kzp1-mo_nzfilt)*mo_dzita
-        do k = 1, kz
-          if ( k > mo_nzfilt ) then
-            ffilt(k) = d_zero
-          else
-            zzi = (mo_dzita*(kzp1-k)-zfilt)/(mo_ztop-zfilt)
-            ffilt(k) = mo_zfilt_fac*sin(d_half*mathpi*zzi)**2
-          end if
+      np = real((jcross2-jcross1+1)*(icross2-icross1+1),rk8)
+      do k = 1, kz
+        meanz = 0.0_rkx
+        do concurrent ( j = jce1:jce2, i = ice1:ice2 )
+          meanz = meanz + real(mo_atm%zeta(j,i,k),rk8)/np
         end do
-      else
-        ffilt(:) = d_zero
-      end if
+        call sumall(meanz,gmeanz(k))
+      end do
+      ! Sponge layer at the top of the atmosphere
+      do k = 1, kz
+        if ( gmeanz(k) < mo_h ) then
+          ffilt(k) = d_zero
+        else
+          zzi = (gmeanz(k)-mo_h)/(mo_ztop-mo_h)
+          ffilt(k) = mo_zfilt_fac*sin(d_half*mathpi*zzi)**2
+        end if
+      end do
     end if
     call initialize_surface_model
     if ( idynamic /= 3 ) then
@@ -1054,6 +1061,42 @@ module mod_init
 #endif
 
   end subroutine init
+
+  subroutine uvstagtox(u,v,ux,vx)
+    implicit none
+    real(rkx), intent(inout), dimension(:,:,:), pointer, contiguous :: u, v
+    real(rkx), intent(inout), dimension(:,:,:), pointer, contiguous :: ux, vx
+    integer(ik4) :: i, j, k
+
+    do concurrent ( j = jci1:jci2, i = ice1:ice2, k = 1:kz )
+      ux(j,i,k) = 0.5625_rkx * (u(j+1,i,k)+u(j,i,k)) - &
+                  0.0625_rkx * (u(j+2,i,k)+u(j-1,i,k))
+    end do
+    if ( ma%has_bdyleft ) then
+      do concurrent ( i = ice1:ice2, k = 1:kz )
+        ux(jce1,i,k) = 0.5_rkx * (u(jde1,i,k)+u(jdi1,i,k))
+      end do
+    end if
+    if ( ma%has_bdyright ) then
+      do concurrent ( i = ice1:ice2, k = 1:kz )
+        ux(jce2,i,k) = 0.5_rkx * (u(jde2,i,k)+u(jdi2,i,k))
+      end do
+    end if
+    do concurrent ( j = jce1:jce2, i = ici1:ici2, k = 1:kz )
+      vx(j,i,k) = 0.5625_rkx * (v(j,i+1,k)+v(j,i,k)) - &
+                  0.0625_rkx * (v(j,i+2,k)+v(j,i-1,k))
+    end do
+    if ( ma%has_bdybottom ) then
+      do concurrent ( j = jce1:jce2, k = 1:kz )
+        vx(j,ice1,k) = 0.5_rkx * (v(j,ide1,k)+v(j,idi1,k))
+      end do
+    end if
+    if ( ma%has_bdytop ) then
+      do concurrent ( j = jce1:jce2, k = 1:kz )
+        vx(j,ice2,k) = 0.5_rkx * (v(j,ide2,k)+v(j,idi2,k))
+      end do
+    end if
+  end subroutine uvstagtox
 
 end module mod_init
 

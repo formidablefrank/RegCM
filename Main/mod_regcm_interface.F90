@@ -217,7 +217,7 @@ module mod_regcm_interface
       call output
     else
       call output
-      call bdyval
+      if ( idynamic /= 3 ) call bdyval
     end if
     !
     ! Reduce the I/O-only timers to the slowest rank's time (mycomm, so this
@@ -334,7 +334,7 @@ module mod_regcm_interface
         ! fill up the boundary values for xxb and xxa variables:
         !
         if ( irceideal /= 1 ) then
-          call bdyval
+          if ( idynamic /= 3 ) call bdyval
         end if
       end if
       !
