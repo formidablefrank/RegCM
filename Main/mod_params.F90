@@ -73,7 +73,7 @@ module mod_params
                xtop, xx, yy, mo_c1, mo_c2, dl, minfrq
     integer(ik4) :: kbmax
     integer(ik4) :: iretval
-    integer(ik4) :: i, j, k, kbase, ktop, ns
+    integer(ik4) :: i, j, k, kbase, ktop, ns, isp
     integer(ik8) :: mdate0, mdate1, mdate2
     integer(ik4) :: hspan, ipunit
     integer(ik4) :: n, len_path
@@ -116,7 +116,7 @@ module mod_params
 
     namelist /nonhydroparam/ ifupr, nhbet, nhxkd,       &
       ifrayd, rayndamp, rayalpha0, rayhd, itopnudge,  &
-      mo_divfilter, mo_divdamp, mo_nadv, mo_nsound, mo_nzfilt
+      mo_divfilter, mo_divdamp, mo_nadv, mo_nsound
 
     namelist /rrtmparam/ inflgsw, iceflgsw, liqflgsw, inflglw,    &
       iceflglw, liqflglw, icld, irng, imcica, nradfo, rrtm_extend
@@ -158,7 +158,9 @@ module mod_params
 
     namelist /kfparam/ kf_min_pef, kf_max_pef, kf_entrate, kf_dpp, &
       kf_min_dtcape, kf_max_dtcape, kf_tkemax, kf_convrate,        &
-      kf_wthreshold
+      kf_wthreshold, istochastic
+
+    namelist /kfstochastic/ rad_sigma, rad_min, rad_max
 
     namelist /chemparam/ chemsimtype, ichremlsc, ichremcvc, ichdrdepo, &
       ichcumtra, ichsolver, idirect, iindirect, ichdustemd,           &
@@ -346,9 +348,8 @@ module mod_params
     rayhd = 10000.0_rkx
     mo_nadv = 3
     mo_nsound = 5
-    mo_divfilter = .false.
-    mo_divdamp = .false.
-    mo_nzfilt = kz/3
+    mo_divfilter = .true.
+    mo_divdamp = .true.
     !
     ! Rrtm radiation param ;
     !
@@ -528,6 +529,9 @@ module mod_params
     kf_tkemax = 5.0_rkx   ! Maximum turbolent kinetic energy in sub cloud layer
     kf_min_dtcape = 1800.0_rkx ! Consumption time of CAPE low limit
     kf_max_dtcape = 3600.0_rkx ! Consumption time of CAPE high limit
+    rad_sigma = 0.0_rkx ! Deterministic
+    rad_min = 1000.0_rkx ! Temporal number (Needs revision)
+    rad_max = 2000.0_rkx ! Temporal number (Needs revision)
     !
     ! uwparam ;
     ! Original settings from Travis O'Brian
@@ -983,6 +987,16 @@ module mod_params
           write(stdout,*) 'Resetting kf_tkemax to 3 m2 s-2'
           kf_tkemax = 3.0_rkx
         end if
+
+        if ( istochastic == 1 ) then
+          rewind(ipunit)
+          read (ipunit, nml=kfstochastic, iostat=iretval, err=113)
+          if ( iretval /= 0 ) then
+            write(stdout, *) 'No kfstochastic namelist'
+            write(stdout, *) 'Setting KF radius to deterministic'
+            istochastic = 0
+          end if
+        end if
       end if
       if ( iocnflx < 0 .or. iocnflx > 3 ) then
         call fatal(__FILE__,__LINE__, &
@@ -1387,7 +1401,6 @@ module mod_params
       ! Moloch paramters here
       call bcast(mo_divfilter)
       call bcast(mo_divdamp)
-      call bcast(mo_nzfilt)
       call bcast(mo_nadv)
       call bcast(mo_nsound)
       call bcast(ifrayd)
@@ -1854,6 +1867,12 @@ module mod_params
       call bcast(kf_min_dtcape)
       call bcast(kf_max_dtcape)
       call bcast(kf_tkemax)
+      call bcast(istochastic)
+      if ( istochastic == 1 ) then
+        call bcast(rad_sigma)
+        call bcast(rad_min)
+        call bcast(rad_max)
+      end if
     end if
 
     if ( ibltyp == 1 ) then
@@ -2208,11 +2227,18 @@ module mod_params
     ! Calculate boundary areas per processor
     !
     if ( idynamic == 3 ) then
-      nspgx = max(5, nint(20.0_rkx * (ds**(-0.35_rkx))))
+      nspgx = min(max(6, nint(20.0_rkx * (ds**(-0.35_rkx)))+1),34)
+      isp = 1
+      do while (isp < nspgx-2 )
+        isp = isp * 2
+      end do
+      nspgx = isp+2
       nspgd = nspgx
       if ( myid == italk ) then
         write(stdout,'(a,f7.3,a)') ' Resolution of ',ds,' km.'
-        write(stdout,'(a,i3,a)') ' Using nspgx = ',nspgx,' in MOLOCH code'
+        write(stdout,'(a,i2,a)') ' Using nspgx = ',nspgx,' in MOLOCH code'
+        write(stdout,'(a,i2,a)') ' Boundary effect on ',nspgx-2, &
+          ' point in the output files.'
       end if
     else
       if ( iboudy == 4 ) then
@@ -2224,6 +2250,9 @@ module mod_params
     call setup_boundaries(cross,cross,ba_cr)
     if ( idynamic /= 3 ) then
       call setup_boundaries(dot,dot,ba_dt)
+    else
+      call setup_boundaries(dot,cross,ba_ud)
+      call setup_boundaries(cross,dot,ba_vd)
     end if
 
     call allocate_v2dbound(xpsb,cross)
@@ -2237,8 +2266,6 @@ module mod_params
       call allocate_v3dbound(xwwb,kzp1,cross)
     else if ( idynamic == 3 ) then
       call allocate_v3dbound(xpaib,kz,cross)
-      call allocate_v3dbound(xub,kz,cross)
-      call allocate_v3dbound(xvb,kz,cross)
     end if
 
     if ( myid == italk ) then
