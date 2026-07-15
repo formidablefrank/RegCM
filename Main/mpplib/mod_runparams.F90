@@ -214,6 +214,37 @@ module mod_runparams
   logical, public :: do_parallel_save
   logical, public :: ifrest, doing_restart, lsync, chechgact
 
+  ! Wall-clock time (seconds, mpi_wtime), accumulated separately per phase,
+  ! spent only in I/O-performing calls -- not the whole init/run phase.
+  ! init_io_read_walltime : init_bdy (fresh-run ICBC read) + read_savefile
+  !                         (restart read), whichever path runs
+  ! init_io_write_walltime: actual output-file writes (outstream_writevar,
+  !                         i.e. the nf90_put_var/nf90mpi_put_var_all/
+  !                         async_netcdf_put_var call itself) made during
+  !                         RCM_initialize's startup output() call
+  ! run_io_read_walltime  : bdyin (periodic boundary refresh) inside RCM_run
+  ! run_io_write_walltime : actual output-file writes made during RCM_run's
+  !                         periodic output() calls
+  ! The two write timers deliberately EXCLUDE the MPI gather (grid_collect)
+  ! that precedes each write when do_parallel_netcdf_out=.false. -- see
+  ! write_record_output_stream (mod_ncout.F90), which times only the
+  ! outstream_writevar call, not the grid_collect call right before it.
+  ! Excludes non-I/O compute bundled in the same subroutines (e.g. init()'s
+  ! array copies from already-read boundary data), minor optional I/O paths
+  ! not separately instrumented (e.g. read_ccn CCN climatology, and the
+  ! slab-ocean qflux write in write_vars_slaboc_stream -- not used by any
+  ! namelist in this benchmarking campaign).
+  real(rk8), public :: init_io_read_walltime = d_zero
+  real(rk8), public :: init_io_write_walltime = d_zero
+  real(rk8), public :: run_io_read_walltime = d_zero
+  real(rk8), public :: run_io_write_walltime = d_zero
+
+  ! Set .true. right before RCM_run's time-stepping loop starts; read by
+  ! write_record_output_stream (mod_ncout.F90) to decide whether an actual
+  ! output-file write it times belongs to init_io_write_walltime (still
+  ! .false., i.e. RCM_initialize's startup write) or run_io_write_walltime.
+  logical, public :: io_timing_run_phase = .false.
+
   real(rkx), pointer, contiguous, dimension(:), public :: dtau, dtsplit
   real(rkx), pointer, contiguous, dimension(:), public :: hsigma, dsigma, qcon
   real(rkx), pointer, contiguous, dimension(:), public :: sigma, zita, zitah

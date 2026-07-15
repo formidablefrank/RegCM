@@ -27,6 +27,7 @@ module mod_ncout
   use mod_service
   use mod_stdio
   use netcdf
+  use mpi
 
   implicit none
 
@@ -4285,6 +4286,7 @@ module mod_ncout
     real(rkx), pointer, contiguous, dimension(:,:,:,:) :: pnt4d => null( )
     class(ncvariable_standard), pointer :: vp
     integer(ik4) :: ivar, jfile
+    real(rk8) :: t_io0
     !@acc call nvtxStartRange("write_record_output_stream")
     if ( .not. parallel_out .and. myid /= iocpu ) then
       do ivar = 1, outstream(istream)%nvar
@@ -4425,7 +4427,17 @@ module mod_ncout
       end if
 #endif
 
+      ! Time only the actual output-file write (nf90_put_var/
+      ! nf90mpi_put_var_all/async_netcdf_put_var, inside outstream_writevar)
+      ! -- deliberately excludes the grid_collect gather above, which is a
+      ! separate, timed-elsewhere concern (not part of "writing the file").
+      t_io0 = mpi_wtime()
       call outstream_writevar(outstream(istream)%ncout(jfile),vp)
+      if ( io_timing_run_phase ) then
+        run_io_write_walltime = run_io_write_walltime + (mpi_wtime()-t_io0)
+      else
+        init_io_write_walltime = init_io_write_walltime + (mpi_wtime()-t_io0)
+      end if
 
       ! Reset pointers
 

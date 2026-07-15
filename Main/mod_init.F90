@@ -52,6 +52,7 @@ module mod_init
   use mod_zita
   use mod_sound, only : init_sound
   use mod_moloch, only : init_moloch
+  use mpi
 
   implicit none
 
@@ -81,6 +82,7 @@ module mod_init
     real(rkx) :: zzi, zfilt
     real(rkx), dimension(kzp1) :: ozprnt
     real(rkx), dimension(:,:,:), pointer :: tccn => null( )
+    real(rk8) :: t_io0
 #ifdef DEBUG
     character(len=dbgslen) :: subroutine_name = 'init'
     integer(ik4), save :: idindx = 0
@@ -414,7 +416,9 @@ module mod_init
       !
       ! When restarting, read in the data saved from previous run
       !
+      t_io0 = mpi_wtime()
       call read_savefile(rcmtimer%idate)
+      init_io_read_walltime = init_io_read_walltime + (mpi_wtime()-t_io0)
       !
       ! Comunicate the data to other processors
       !

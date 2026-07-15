@@ -872,10 +872,19 @@ if test -z "$COMPILER_PGI_TRUE"; then
     LDFLAGS="$LDFLAGS -traceback -cudalib=nvtx,cusparse"
   fi
   if eval "test x"$USE_OPENACC" = x4"; then
+    # mem:managed: mem:unified was tried first (theory: managed memory's
+    # multi-process/UCX sync quirks caused a segfault in rrtmg_sw_spcvmc)
+    # but this platform's A100/driver pairing does not support true CUDA
+    # Unified Memory at all ("Accelerator Fatal Error: The application
+    # was compiled with -gpu=unified, but this platform does not support
+    # Unified Memory" -- immediate hard failure, not a runtime bug).
+    # mem:managed is the only mode that runs real physics at all here
+    # (confirmed: 2 output timesteps written before the rank-3 segfault),
+    # even though that segfault is not yet resolved -- see deferred-work.md.
     FCFLAGS="$FCFLAGS -stdpar=gpu \
-        -gpu=$PGI_GPU_ARCH,lineinfo,mem:unified -Minfo=accel"
+        -gpu=$PGI_GPU_ARCH,lineinfo,mem:managed -Minfo=accel"
     NOOPTFC="$NOOPTFC -stdpar=gpu \
-        -gpu=$PGI_GPU_ARCH,lineinfo,mem:unified -Minfo=accel"
+        -gpu=$PGI_GPU_ARCH,lineinfo,mem:managed -Minfo=accel"
     LDFLAGS="$LDFLAGS -traceback -cudalib=nvtx,cusparse"
   fi
   AC_SUBST(FCFLAGS)

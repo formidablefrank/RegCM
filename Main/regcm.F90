@@ -41,6 +41,8 @@ program regcm
   real(rk8) :: timestr, timeend
   type(rcm_time_interval) :: tdif
   integer(ik4) :: ierr, iprov
+  integer(ik4) :: bench_myid
+  real(rk8) :: t_init_start, t_init_end, t_run_start, t_run_end
 #ifdef OASIS
   integer :: localCommunicator
 #endif
@@ -61,14 +63,24 @@ program regcm
     write(stderr,*) 'Cannot initilize MPI'
     stop
   end if
+  call mpi_comm_rank(mpi_comm_world,bench_myid,ierr)
+  t_init_start = mpi_wtime()
   call RCM_initialize()
 #else
   !
   ! OASIS Initialization
   !
   call oasisxregcm_init(localCommunicator)
+  call mpi_comm_rank(mpi_comm_world,bench_myid,ierr)
+  t_init_start = mpi_wtime()
   call RCM_initialize(localCommunicator)
 #endif
+  t_init_end = mpi_wtime()
+  if ( bench_myid == 0 ) then
+    write(stdout,'(a,f14.3)') 'INIT_WALLTIME=', t_init_end - t_init_start
+    write(stdout,'(a,f14.3)') 'INIT_IO_READ_WALLTIME=', init_io_read_walltime
+    write(stdout,'(a,f14.3)') 'INIT_IO_WRITE_WALLTIME=', init_io_write_walltime
+  end if
 !
 !**********************************************************************
 !
@@ -80,7 +92,14 @@ program regcm
   tdif = idate2 - idate1
   timeend = tohours(tdif) * secph
 
+  t_run_start = mpi_wtime()
   call RCM_run(timestr, timeend)
+  t_run_end = mpi_wtime()
+  if ( bench_myid == 0 ) then
+    write(stdout,'(a,f14.3)') 'RUN_WALLTIME=', t_run_end - t_run_start
+    write(stdout,'(a,f14.3)') 'RUN_IO_READ_WALLTIME=', run_io_read_walltime
+    write(stdout,'(a,f14.3)') 'RUN_IO_WRITE_WALLTIME=', run_io_write_walltime
+  end if
 !
 !**********************************************************************
 !

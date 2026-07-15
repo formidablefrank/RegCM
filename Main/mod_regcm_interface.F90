@@ -73,6 +73,8 @@ module mod_regcm_interface
     real(rkx), allocatable, dimension(:,:) :: rcemip_noise
     integer(ik4) :: ierr, k
     real(rkx) :: rnl
+    real(rk8) :: t_io0
+    real(rk8) :: io_max
     !
     ! MPI Initialization
     !
@@ -169,7 +171,9 @@ module mod_regcm_interface
     !
     if ( .not. ifrest ) then
       if ( irceideal /= 1 ) then
+        t_io0 = mpi_wtime()
         call init_bdy
+        init_io_read_walltime = init_io_read_walltime + (mpi_wtime()-t_io0)
       end if
     end if
     !
@@ -216,6 +220,17 @@ module mod_regcm_interface
       call bdyval
     end if
     !
+    ! Reduce the I/O-only timers to the slowest rank's time (mycomm, so this
+    ! is correct under both plain-MPI and OASIS-coupled builds), since the
+    ! actual I/O cost of a collective read/write is set by its straggler, not
+    ! by whichever rank happens to print (rank 0's local time alone would
+    ! miss inter-rank skew when do_parallel_netcdf_in/out=.true.).
+    !
+    call maxall(init_io_read_walltime,io_max)
+    init_io_read_walltime = io_max
+    call maxall(init_io_write_walltime,io_max)
+    init_io_write_walltime = io_max
+    !
     ! Clean up and logging
     !
 #ifdef DEBUG
@@ -236,6 +251,13 @@ module mod_regcm_interface
     real(rk8), intent(in) :: timestr   ! starting time-step
     real(rk8), intent(in) :: timeend   ! ending   time-step
     logical :: defer_async_for_bdyin
+    real(rk8) :: t_io0
+    real(rk8) :: io_max
+
+    ! From here on, an actual output-file write timed by
+    ! write_record_output_stream (mod_ncout.F90) belongs to
+    ! run_io_write_walltime, not init_io_write_walltime.
+    io_timing_run_phase = .true.
 
     do while ( extime >= timestr .and. extime < timeend )
       !
@@ -301,7 +323,11 @@ module mod_regcm_interface
           !
           ! Read in new boundary conditions
           !
-          if ( irceideal /= 1 ) call bdyin
+          if ( irceideal /= 1 ) then
+            t_io0 = mpi_wtime()
+            call bdyin
+            run_io_read_walltime = run_io_read_walltime + (mpi_wtime()-t_io0)
+          end if
         end if
         if ( defer_async_for_bdyin ) call end_output_streams_async_batch()
         !
@@ -330,6 +356,13 @@ module mod_regcm_interface
       end if
 
     end do
+
+    ! Reduce the I/O-only timers to the slowest rank's time (mycomm) -- see
+    ! the matching comment at the end of RCM_initialize.
+    call maxall(run_io_read_walltime,io_max)
+    run_io_read_walltime = io_max
+    call maxall(run_io_write_walltime,io_max)
+    run_io_write_walltime = io_max
 
 #ifdef DEBUG
     call time_print(6,'evolution phase')
