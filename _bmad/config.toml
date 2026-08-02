@@ -20,12 +20,6 @@ planning_artifacts = "{project-root}/_bmad-output/planning-artifacts"
 implementation_artifacts = "{project-root}/_bmad-output/implementation-artifacts"
 project_knowledge = "{project-root}/docs"
 
-[modules.hpc-dev]
-FAST_BASELINE_ROOT = "/leonardo_scratch/fast/ICT26_MHPC_0/franco/RegCM-data"
-WORK_ARCHIVE_ROOT = "/leonardo_work/ICT26_MHPC_0/franco/RegCM-archive"
-SLURM_ACCOUNT_DCGP = "ICT26_MHPC_0"
-SLURM_ACCOUNT_BOOST = "ICT26_MHPC"
-
 [agents.bmad-agent-analyst]
 module = "bmm"
 team = "software-development"

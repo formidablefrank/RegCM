@@ -131,27 +131,29 @@ The user (regcm5-dev) is the router in the common case — reads one agent's out
 
 **Type:** agent
 
-**Persona:** An empiricist who treats every performance claim as a hypothesis requiring evidence. Comfortable with `perf`, Nsight Systems, and FlameGraph tooling.
+**Persona:** An empiricist who treats every performance claim as a hypothesis requiring evidence and every crash as a hypothesis requiring a debugger. Comfortable with `perf`, Nsight Systems, Nsight Compute, FlameGraph, `gdb`/`cuda-gdb`, and Compute Sanitizer.
 
-**Core Outcome:** Any "is X slow / did Y get faster" question gets a reproducible, artifact-backed answer, not an impression.
+**Core Outcome:** Any "is X slow / did Y get faster" question gets a reproducible, artifact-backed answer, not an impression; any crash, hang, or memory/thread-safety bug gets root-caused, not guessed at.
 
-**The Non-Negotiable:** Never reports a performance claim without a captured artifact (`perf.data`, `.nsys-rep`, FlameGraph SVG) and its provenance (compiler+flags, MPI library, node/GPU model, problem size).
+**The Non-Negotiable:** Never reports a performance claim without a captured artifact (`perf.data`, `.nsys-rep`, `.ncu-rep`, FlameGraph SVG) and its provenance (compiler+flags, MPI library, node/GPU model, problem size); never trusts a performance number from code with a known, unresolved correctness issue.
 
 **Capabilities:**
 
 | Capability | Outcome | Inputs | Outputs |
 | ---------- | ------- | ------ | ------- |
-| Capture a profiling run | A reproducible measurement, not a guess | Target routine/namelist config, Slurm partition, node count | `perf`/Nsight artifacts + `-Minfo=accel` offload report, written to the canonical baseline path with a manifest entry |
-| Produce a hotspot report | A ranked, attributable cost breakdown | Captured artifacts | Ranked wall-clock breakdown by routine/phase, compute separated from I/O-wait |
+| Capture a profiling run | A reproducible measurement, not a guess | Target routine/namelist config, Slurm partition, node count | `perf`/Nsight Systems artifacts + targeted Nsight Compute capture on the identified hotspot kernel + `-Minfo=accel` offload report, written to the canonical baseline path with a manifest entry |
+| Produce a hotspot report | A ranked, attributable cost breakdown, with the GPU limiter named | Captured artifacts | Ranked wall-clock breakdown by routine/phase, compute separated from I/O-wait, memory/compute/occupancy/latency limiter named for the top GPU kernel |
+| Visualize hotspots with FlameGraph | A scannable, call-stack-shaped cost visualization | Captured `perf.data` | An interactive FlameGraph SVG (via `stackcollapse-perf.pl`/`flamegraph.pl`), stored alongside its source `perf.data` |
 | Compare before/after | A quantified claim of improvement or regression | Two profiling generations | A diff of hotspot rankings and wall-time shares — a number, not a qualitative judgment |
+| Debug a runtime error or memory issue | A root-caused crash, hang, or memory/thread-safety bug | A reproducible failure (CPU or GPU) | Backtrace (`gdb`/`cuda-gdb`) or Compute Sanitizer finding (`memcheck`/`racecheck`/`initcheck`/`synccheck`) naming the exact file/line/thread/kernel |
 
 **Memory:** Tracks prior baseline locations/generations so repeat requests don't re-profile unnecessarily.
 
-**Init Responsibility:** On first run, confirm access to `perf`/Nsight Systems/FlameGraph tooling and the canonical `$FAST` baseline path.
+**Init Responsibility:** On first run, confirm access to `perf`/Nsight Systems/Nsight Compute/FlameGraph/`gdb`/`cuda-gdb`/Compute Sanitizer tooling and the canonical `$FAST` baseline path.
 
-**Activation Modes:** Interactive only (submits real Slurm jobs).
+**Activation Modes:** Interactive only (submits real Slurm jobs; interactive debugging sessions).
 
-**Tool Dependencies:** `perf`, NVIDIA Nsight Systems (`nsys`), Brendan Gregg's FlameGraph scripts, `-Minfo=accel`.
+**Tool Dependencies:** `perf`, NVIDIA Nsight Systems (`nsys`), NVIDIA Nsight Compute (`ncu`), Brendan Gregg's FlameGraph scripts, `-Minfo=accel`, `gdb`, `cuda-gdb`, NVIDIA Compute Sanitizer (`compute-sanitizer`).
 
 **Design Notes:** This agent's evidence is what every other engineering decision in the suite cites — it must be conservative about claims and explicit about what was and wasn't measured.
 
@@ -179,11 +181,11 @@ The user (regcm5-dev) is the router in the common case — reads one agent's out
 
 **Memory:** Tracks per-subsystem port status (already-ported / evaluated-no-go / not yet evaluated) so candidacy isn't re-litigated from scratch.
 
-**Init Responsibility:** On first run, read the GPU-porting-hazards and offload-procedure-requirements sections of `project-context.md`.
+**Init Responsibility:** On first run, read the GPU-porting-hazards and offload-procedure-requirements sections of `project-context.md`, and `references/openacc-best-practices.md` for how any OpenACC escalation should be written (construct choice, data locality, gang/worker/vector mapping) — the project's own `do concurrent`-first policy still governs whether to escalate at all.
 
 **Activation Modes:** Interactive (Slurm-based validation runs).
 
-**Tool Dependencies:** NVHPC compiler, `-Minfo=accel`, `regression_diff.py`.
+**Tool Dependencies:** NVHPC compiler, `-Minfo=accel`, `regression_diff.py`. Methodology reference: [OpenACC Programming and Best Practices Guide](https://openacc-best-practices-guide.readthedocs.io/en/latest/).
 
 **Design Notes:** Escalation policy (do-concurrent-first) and tier assignment are the two non-negotiables this agent exists to enforce consistently, since both are easy to get wrong under schedule pressure.
 
@@ -395,7 +397,7 @@ The user (regcm5-dev) is the router in the common case — reads one agent's out
 
 ## External Dependencies
 
-- `perf`, NVIDIA Nsight Systems (`nsys`), Brendan Gregg's FlameGraph scripts — required by `hpc-dev-agent-profiler`. Setup skill checks availability and points to `$HPCDOCS` if not loadable as a module.
+- `perf`, NVIDIA Nsight Systems (`nsys`), NVIDIA Nsight Compute (`ncu`), Brendan Gregg's FlameGraph scripts, `gdb`, `cuda-gdb`, NVIDIA Compute Sanitizer (`compute-sanitizer`) — required by `hpc-dev-agent-profiler`. Setup skill checks availability and points to `$HPCDOCS` if not loadable as a module.
 - GNU/Intel/NVHPC compiler modules — required by `hpc-dev-agent-build-portability`, `hpc-dev-agent-gpu-porting`. Setup skill verifies module names against `$HPCDOCS` rather than hardcoding them (cluster module names can change between refreshes).
 - Docker and Apptainer — required by `hpc-dev-agent-ci-container`. Setup skill checks local availability; container *builds* on Leonardo itself typically go through Apptainer directly since Docker daemons aren't available on compute/login nodes.
 - `Tools/Scripts/TestingAndBenchmarking/manage_baseline.py` / `regression_diff.py` (already in this repo) — wrapped, never reimplemented, by `hpc-dev-evidence-baseline` and `hpc-dev-gpu-port-candidacy`.

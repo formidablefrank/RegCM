@@ -8,7 +8,7 @@ A custom BMAD module that executes RegCM5's HPC-modernization program — the PR
 | --- | --- | --- |
 | Gaspare | `hpc-dev-agent-code-comprehension` | Reads and explains RegCM5 source; answers developer questions; never modifies code. |
 | Jacopo | `hpc-dev-agent-hpc-software-developer` | Writes/modifies modern Fortran for RegCM5 on HPC infrastructure; consults `$HPCDOCS` before environment-specific code. |
-| Lorenzo | `hpc-dev-agent-profiler` | Captures reproducible perf/Nsight/FlameGraph profiling evidence. |
+| Lorenzo | `hpc-dev-agent-profiler` | Captures reproducible perf/Nsight profiling evidence; visualizes CPU hotspots with FlameGraph; debugs CPU/GPU runtime errors and memory/thread-safety issues with gdb/cuda-gdb/Compute Sanitizer. |
 | Dario | `hpc-dev-agent-gpu-porting` | Decides GPU-port candidacy, ports via `do concurrent`/OpenACC, validates against the tolerance policy. |
 | Franco | `hpc-dev-agent-build-portability` | Keeps the GNU/Intel/NVHPC build matrix green; implements I/O opt-in switches. |
 | Giacomo | `hpc-dev-agent-ci-container` | Packages builds into containers; maintains the GitHub Actions pipeline. |
