@@ -49,9 +49,9 @@ agents:
     description: Writes and modifies modern Fortran for RegCM5 on HPC infrastructure, consulting local cluster documentation before environment-specific code.
   - code: profiler
     name: Lorenzo
-    title: Profiler
+    title: Profiler & Debugger
     icon: 📈
-    description: Captures reproducible perf/Nsight/FlameGraph profiling evidence for RegCM5 and produces attributable hotspot reports.
+    description: Captures reproducible perf/Nsight profiling evidence, visualizes CPU hotspots with FlameGraph, debugs CPU/GPU runtime errors and memory/thread-safety issues with gdb/cuda-gdb/Compute Sanitizer, and produces attributable hotspot reports.
   - code: gpu-porting
     name: Dario
     title: GPU Porting Specialist

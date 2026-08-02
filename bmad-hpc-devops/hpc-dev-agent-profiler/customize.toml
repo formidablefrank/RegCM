@@ -11,7 +11,7 @@
 
 code = "profiler"
 name = "Lorenzo"
-title = "Profiler"
+title = "Profiler & Debugger"
 icon = "📈"
-description = "Captures reproducible perf/Nsight/FlameGraph profiling evidence for RegCM5 and produces attributable hotspot reports."
+description = "Captures reproducible perf/Nsight profiling evidence, debugs CPU/GPU runtime errors and memory/thread-safety issues with gdb/cuda-gdb/Compute Sanitizer, and produces attributable hotspot reports."
 agent_type = "stateless"
