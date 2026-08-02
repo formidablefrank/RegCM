@@ -230,6 +230,7 @@ Two custom BMAD modules exist for this program, registered in `_bmad/config.yaml
 | Understanding existing code / "what does X do" | `hpc-dev-agent-code-comprehension` | Gaspare |
 | General RegCM5 Fortran/HPC implementation | `hpc-dev-agent-hpc-software-developer` | Jacopo |
 | Profiling / establishing a baseline | `hpc-dev-evidence-baseline` | Lorenzo |
+| CPU/GPU crash, hang, memory or thread-safety bug | `hpc-dev-agent-profiler` (debug capability) | Lorenzo |
 | GPU-port candidacy or porting | `hpc-dev-gpu-port-candidacy` | Dario |
 | Compiler/build-matrix work | `hpc-dev-cross-vendor-build-verification` | Franco |
 | I/O scaling or bottleneck diagnosis | `hpc-dev-io-scaling-diagnosis` | Franco |
