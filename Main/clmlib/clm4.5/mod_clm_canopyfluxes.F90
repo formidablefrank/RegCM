@@ -269,6 +269,7 @@ module mod_clm_canopyfluxes
    real(rk8), pointer, contiguous :: qflx_evap_veg(:)
    ! sensible heat flux from leaves (W/m**2) [+ to atm]
    real(rk8), pointer, contiguous :: eflx_sh_veg(:)
+   real(rk8), pointer, contiguous :: ustarp(:)    ! Friction Velocity (m/s)
    real(rk8), pointer, contiguous :: taux(:)      ! wind (shear) stress: e-w (kg/m/s**2)
    real(rk8), pointer, contiguous :: tauy(:)      ! wind (shear) stress: n-s (kg/m/s**2)
    ! sensible heat flux from ground (W/m**2) [+ to atm]
@@ -597,7 +598,9 @@ module mod_clm_canopyfluxes
    forc_lwrad     => clm_a2l%forc_lwrad
    forc_pco2      => clm_a2l%forc_pco2
    if ( use_c13 ) then
-     forc_pc13o2    => clm_a2l%forc_pc13o2
+     forc_pc13o2  => clm_a2l%forc_pc13o2
+   else
+     forc_pc13o2  => null( )
    end if
    forc_po2       => clm_a2l%forc_po2
    forc_q         => clm_a2l%forc_q
@@ -698,6 +701,7 @@ module mod_clm_canopyfluxes
    sabv           => clm3%g%l%c%p%pef%sabv
    qflx_evap_veg  => clm3%g%l%c%p%pwf%qflx_evap_veg
    eflx_sh_veg    => clm3%g%l%c%p%pef%eflx_sh_veg
+   ustarp         => clm3%g%l%c%p%pmf%ustar
    taux           => clm3%g%l%c%p%pmf%taux
    tauy           => clm3%g%l%c%p%pmf%tauy
    eflx_sh_grnd   => clm3%g%l%c%p%pef%eflx_sh_grnd
@@ -1235,6 +1239,7 @@ module mod_clm_canopyfluxes
                laisha(p)/(rb(p)+rssha(p)))/max(elai(p), 0.01_rk8)
 #endif
        efpot = forc_rho(g)*wtl*(qsatl(p)-qaf(p))
+       if ( abs(efpot) < 1.0e-20_rk8 ) efpot = 0._rk8
 
        if ( efpot > 0._rk8 ) then
          if ( btran(p) > btran0 ) then
@@ -1330,8 +1335,9 @@ module mod_clm_canopyfluxes
        ! result in an imbalance in "hvap*qflx_evap_veg" and
        ! "efe + dc2*wtgaq*qsatdt_veg"
 
-       efpot = forc_rho(g)*wtl*(wtgaq*(qsatl(p)+qsatldT(p)*dt_veg(p)) &
-            -wtgq0*qg(c)-wtaq0(p)*forc_q(g))
+       efpot = forc_rho(g)*wtl*(wtgaq*(qsatl(p)+qsatldT(p)*dt_veg(p)) - &
+               wtgq0*qg(c)-wtaq0(p)*forc_q(g))
+       if ( abs(efpot) < 1.0e-20_rk8 ) efpot = 0._rk8
        qflx_evap_veg(p) = rpp*efpot
 
        ! Calculation of evaporative potentials (efpot) and
@@ -1458,6 +1464,7 @@ module mod_clm_canopyfluxes
      ! Fluxes from ground to canopy space
 
      delt    = wtal(p)*t_grnd(c)-wtl0(p)*t_veg(p)-wta0(p)*thm(p)
+     ustarp(p) = ustar(p)
      taux(p) = -forc_rho(g)*forc_u(g)/ram1(p)
      tauy(p) = -forc_rho(g)*forc_v(g)/ram1(p)
      eflx_sh_grnd(p) = cpair*forc_rho(g)*wtg(p)*delt
@@ -1520,6 +1527,7 @@ module mod_clm_canopyfluxes
      ! Update dew accumulation (kg/m2)
 
      h2ocan(p) = max(0._rk8,h2ocan(p)+(qflx_tran_veg(p)-qflx_evap_veg(p))*dtsrf)
+     if ( h2ocan(p) < 1.0e-20_rk8 ) h2ocan(p) = 0._rk8
 
      ! total photosynthesis
 
@@ -1622,17 +1630,17 @@ module mod_clm_canopyfluxes
       gb_mol         => clm3%g%l%c%p%ppsyns%gb_mol
       gs_mol         => clm3%g%l%c%p%ppsyns%gs_mol
 
-      if (phase == 'sun') then
-        par_z       => clm3%g%l%c%p%pef%parsun_z
-        alphapsn    => clm3%g%l%c%p%pps%alphapsnsun
-      else if (phase == 'sha') then
-        par_z       => clm3%g%l%c%p%pef%parsha_z
-        alphapsn    => clm3%g%l%c%p%pps%alphapsnsha
-      else
-        nullify(par_z)
-        nullify(alphapsn)
+      if ( phase /= 'sun' .and. phase /= 'sha' ) then
         write(stderr,*) 'ERRORR! phase not in [sha,sun]'
         call fatal(__FILE__,__LINE__,'clm now stopping')
+      end if
+
+      if ( phase == 'sun' ) then
+        par_z       => clm3%g%l%c%p%pef%parsun_z
+        alphapsn    => clm3%g%l%c%p%pps%alphapsnsun
+      else
+        par_z       => clm3%g%l%c%p%pef%parsha_z
+        alphapsn    => clm3%g%l%c%p%pps%alphapsnsha
       end if
 
 #ifdef OPENACC

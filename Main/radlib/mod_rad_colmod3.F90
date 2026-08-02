@@ -16,7 +16,7 @@
 module mod_rad_colmod3
   use mod_intkinds, only : ik4
   use mod_realkinds, only : rk8, rkx
-  use mod_constants, only : amd, amo3, mathpi
+  use mod_constants, only : amd, amo3, mathpi, onet
   use mod_constants, only : rgas, rhoh2o, tzero, lowcld
   use mod_dynparam, only : jci1, jci2, ici1, ici2, kz, kzp1
   use mod_dynparam, only : ntr, nspi
@@ -217,7 +217,7 @@ module mod_rad_colmod3
     real(rk8) :: totci_l, totcl_l, totwv_l
     real(rk8) :: nc, aerc, lwc, kparam
     real(rk8) :: kabs, kabsi, kabsl, cldemis, arg
-    real(rk8) :: iwc, tempc, tcels, fsr, aiwc, biwc, desr, weight
+    real(rk8) :: iwc, tempc, tcels, fsr, aiwc, biwc
     !real(rk8) :: tpara
     real(rk8), parameter :: minus20 = 253.15_rk8
 #ifdef DEBUG
@@ -563,43 +563,28 @@ module mod_rad_colmod3
       !   rt%rel(k,n) = 11.0_rk8
       ! end if
       !
-      ! Long-wave optical properties of water clouds and rain
-      ! Savijarvi,Raisanene (Tellus 1998)
+      ! (Martin et al., 1994)
       !
       ! g/m3, already account for cum and ls clouds
       if ( temp(k,n) > lowcld ) then
-        if ( rt%ql(k,n) > 1.0E-12_rk8 ) then
-          lwc = (rt%ql(k,n)*rt%rho(k,n)*1000.0_rk8)/temp(k,n)
-          weight = max(0.0_rk8,min(lwc/8.5_rk8,1.0_rk8))
-          if ( rt%ioro(n) == 1 ) then
-            ! Effective liquid radius over land
-            rt%rel(k,n) = 4.0_rk8 + 7.0_rk8*weight
-          else
-            ! Effective liquid radius over ocean and sea ice
-            rt%rel(k,n) = 12.0_rk8 + 8.0_rk8*weight
-          end if
+        if ( rt%ioro(n) == 1 ) then
+          rt%rel(k,n) = max(4.0_rk8,min(20.0_rk8, &
+            (((3.0_rk8*max(rt%ql(k,n)*rt%rho(k,n)/temp(k,n),1.0e-10_rk8)) / &
+              (4.0_rk8*mathpi*rhoh2o*0.67_rk8*300.0e6_rk8))**onet)*1.0e6_rk8))
         else
-          rt%rel(k,n) = 8.5_rk8
+          rt%rel(k,n) = max(4.0_rk8,min(20.0_rk8, &
+            (((3.0_rk8*max(rt%ql(k,n)*rt%rho(k,n)/temp(k,n),1.0e-10_rk8)) / &
+              (4.0_rk8*mathpi*rhoh2o*0.80_rk8*100.0e6_rk8))**onet)*1.0e6_rk8))
         end if
         !
-        ! Stengel, Fokke Meirink, Eliasson (2023)
-        ! On the Temperature Dependence of the Cloud Ice Particle Effective
-        ! Radius - A Satellite Perspective
+        ! Sun & Rikus, 1999
         !
-        if ( rt%qi(k,n) > 1.0E-12_rk8 ) then
-          iwc = (rt%qi(k,n)*rt%rho(k,n)*1000.0_rk8)/temp(k,n)
-          tempc = rt%t(k,n) - 83.15_rk8
-          tcels = tempc - tzero
-          fsr = 1.2351_rk8 + 0.0105_rk8 * tcels
-          aiwc = 45.8966_rk8 * iwc**0.2214_rk8
-          biwc = 0.7957_rk8 * iwc**0.2535_rk8
-          desr = fsr*(aiwc+biwc*tempc)
-          desr = max(15.0_rk8,min(105.0_rk8,desr))
-          weight = max(0.0_rk8,min(iwc/5.0_rk8,1.0_rk8))
-          rt%rei(k,n) = 8.0_rk8 + weight * 0.64952_rk8*desr
-        else
-          rt%rei(k,n) = 20.0_rk8
-        end if
+        iwc = max((rt%qi(k,n)*rt%rho(k,n)*1000.0_rk8)/temp(k,n),1.0e-7_rk8)
+        aiwc = 45.8966_rk8 * iwc**0.2214_rk8
+        biwc = 0.7957_rk8 * iwc**0.2535_rk8
+        ! Temp Celsius in [-80,0] + 190.0
+        tempc = min(273.15_rk8,max(193.15_rk8,rt%t(k,n))) - 83.15_rk8
+        rt%rei(k,n) = max(10.0_rk8,min(100.0_rk8,0.5_rk8*(aiwc+biwc*tempc)))
       else
         ! filler for no clouds
         rt%rel(k,n) = 8.5_rk8
@@ -637,6 +622,8 @@ module mod_rad_colmod3
       do k = 1, kz
         ! Turn off ice radiative properties by setting fice = 0.0
         ! rt%fice(k,n) = 0.0_rk8
+        ! Vertical integral of in cloud ice/liquid water path:
+        !    (g/m^2 * cf) / 1000.0 = grid cell average value in kg/m^2
         totcl_l = totcl_l + &
              (rt%clwp(k,n)*temp(k,n)*(1.0_rk8-rt%fice(k,n)))*0.001_rk8
         totci_l = totci_l + &
@@ -680,10 +667,10 @@ module mod_rad_colmod3
       end do
     end if
     do concurrent ( k = 1:kz, n = rt%n1:rt%n2 )
-      ! ice absorption coefficient
-      kabsi = 0.005_rk8 + (1.0_rk8/rt%rei(k,n))
-      ! liquid water absorption coefficient for broadband long wave
       ! (Hannu Savijärvi & Petri Räisänen)
+      ! ice absorption coefficient
+      kabsi = 0.04_rk8 + 0.08_rk8 * exp(-0.018_rk8*rt%rei(k,n))
+      ! liquid water absorption coefficient for broadband long wave
       kabsl = 0.31_rk8 * exp(-0.08_rk8*rt%rel(k,n))
       ! longwave absorption coeff (m**2/g)
       kabs = kabsl*(1.0_rk8-rt%fice(k,n)) + (kabsi*rt%fice(k,n))
@@ -691,8 +678,20 @@ module mod_rad_colmod3
       arg = min(kabs*rt%clwp(k,n),25.0_rk8)
       cldemis = max(1.0_rk8 - exp(-arg),0.0_rk8)
       ! Effective cloud cover
-      rt%effcld(k,n) = temp(k,n)*cldemis
+      temp(k,n) = temp(k,n)*cldemis
     end do
+    do concurrent ( n = rt%n1:rt%n2 )
+      rt%effcld(1,n) = 0.0_rk8
+      rt%effcld(kzp1,n) = 0.0_rk8
+    end do
+    do concurrent( k = 2:kz, n = rt%n1:rt%n2 )
+      rt%effcld(k,n) = max(temp(k-1,n),temp(k,n))
+    end do
+    if ( ncld > 0 ) then
+      do concurrent ( k = kz-ncld:kz,  n = rt%n1:rt%n2 )
+        rt%effcld(k,n) = 0.0_rk8
+      end do
+    end if
     rt%eccf = real(eccf,rk8)
     rt%labsem = labsem
     !

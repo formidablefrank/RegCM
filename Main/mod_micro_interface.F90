@@ -58,7 +58,7 @@ module mod_micro_interface
   real(rkx), parameter :: xchi = nchi-1
   real(rkx), parameter :: rchi = 1.0_rkx/xchi
 
-  logical, parameter :: do_cfscaling = .false.
+  logical, parameter :: do_cfscaling = .true.
 
   public :: qck1, cgul, rh0, cevap, xcevap, caccr
 
@@ -235,8 +235,8 @@ module mod_micro_interface
     implicit none
     real(rkx), pointer, contiguous, &
       dimension(:,:,:), intent(inout) :: cldlwc, cldfra
+    real(rkx) :: w1, w2
     integer(ik4) :: i, j, k
-    real(rkx) :: conv_exlwc, exlwc
     integer(ik4) :: ichi
 
     if ( ipptls > 1 ) then
@@ -370,25 +370,32 @@ module mod_micro_interface
         do j = jci1, jci2
 #endif
           ! Cloud Water Volume
-          ! kg gq / kg dry air * kg dry air / m3 * 1000 = g qc / m3
-          conv_exlwc = clwfromt(mo2mc%t(j,i,k))
-          exlwc = conv_exlwc*cldfra(j,i,k) + totc(j,i,k)
           ! get overlap of clouds
-          cldfra(j,i,k) = max(cldfra(j,i,k),mc2mo%fcc(j,i,k))
           if ( cldfra(j,i,k) > lowcld ) then
-            ! NOTE : IN CLOUD LWC IS NEEDED IN THE RADIATION !!!
-            exlwc = exlwc/cldfra(j,i,k)
-            ! Scaling for CF
-            ! Implements CF scaling as in Liang GRL 32, 2005
-            ! doi: 10.1029/2004GL022301
-            if ( do_cfscaling ) then
-              ichi = int(cldfra(j,i,k)*xchi)
-              exlwc = exlwc * chis(ichi)
+            if ( mc2mo%fcc(j,i,k) > lowcld ) then
+              w2 = mc2mo%fcc(j,i,k) / (mc2mo%fcc(j,i,k)+cldfra(j,i,k))
+              w1 = 1.0_rkx-w2
+              cldlwc(j,i,k) = w1 * totc(j,i,k)/mc2mo%fcc(j,i,k) + &
+                              w2 * clwfromt(mo2mc%t(j,i,k))
+              cldfra(j,i,k) = max(mc2mo%fcc(j,i,k),cldfra(j,i,k))
+            else
+              cldlwc(j,i,k) = clwfromt(mo2mc%t(j,i,k))
             end if
-            cldlwc(j,i,k) = exlwc
           else
-            cldfra(j,i,k) = d_zero
-            cldlwc(j,i,k) = d_zero
+            if ( mc2mo%fcc(j,i,k) > lowcld ) then
+              cldfra(j,i,k) = mc2mo%fcc(j,i,k)
+              cldlwc(j,i,k) = totc(j,i,k)/mc2mo%fcc(j,i,k)
+            else
+              cldfra(j,i,k) = 0.0_rkx
+              cldlwc(j,i,k) = 0.0_rkx
+            end if
+          end if
+          ! Scaling for CF
+          ! Implements CF scaling as in Liang GRL 32, 2005
+          ! doi: 10.1029/2004GL022301
+          if ( cldlwc(j,i,k) > 0.0_rkx .and. do_cfscaling ) then
+            ichi = int(cldfra(j,i,k)*xchi)
+            cldlwc(j,i,k) = cldlwc(j,i,k) * chis(ichi)
           end if
 #ifndef STDPAR_FIXED
         end do
@@ -402,15 +409,14 @@ module mod_micro_interface
           ! kg gq / kg dry air * kg dry air / m3 * 1000 = g qc / m3
           if ( cldfra(j,i,k) > lowcld ) then
             ! NOTE : IN CLOUD HERE IS NEEDED !!!
-            exlwc = totc(j,i,k)/cldfra(j,i,k)
+            cldlwc(j,i,k) = totc(j,i,k)/cldfra(j,i,k)
             ! Scaling for CF
             ! Implements CF scaling as in Liang GRL 32, 2005
             ! doi: 10.1029/2004GL022301
             if ( do_cfscaling ) then
               ichi = int(cldfra(j,i,k)*xchi)
-              exlwc = exlwc * chis(ichi)
+              cldlwc(j,i,k) = cldlwc(j,i,k) * chis(ichi)
             end if
-            cldlwc(j,i,k) = exlwc
           else
             cldfra(j,i,k) = d_zero
             cldlwc(j,i,k) = d_zero

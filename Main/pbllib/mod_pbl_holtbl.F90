@@ -41,6 +41,7 @@ module mod_pbl_holtbl
                                           kvm, kvq
   real(rkx), pointer, contiguous, dimension(:,:) :: xhfx, xqfx, exns, pfcor
   real(rkx), pointer, contiguous, dimension(:,:) :: hfxv, obklen, thv10, ustr
+  real(rkx), pointer, contiguous, dimension(:,:) :: sh10
   logical, pointer, contiguous, dimension(:,:) :: lunstb
 
   real(rkx), pointer, contiguous, dimension(:,:,:) :: alphak, betak, &
@@ -111,6 +112,7 @@ module mod_pbl_holtbl
     call getmem(exns,jci1,jci2,ici1,ici2,'mod_holtbl:enxns')
     call getmem(pfcor,jci1,jci2,ici1,ici2,'mod_holtbl:pfcor')
     call getmem(thv10,jci1,jci2,ici1,ici2,'mod_holtbl:thv10')
+    call getmem(sh10,jci1,jci2,ici1,ici2,'mod_holtbl:sh10')
     call getmem(ustr,jci1,jci2,ici1,ici2,'mod_holtbl:ustr')
     call getmem(thvx,jci1,jci2,ici1,ici2,1,kz,'mod_holtbl:thvx')
     call getmem(dza,jci1,jci2,ici1,ici2,1,kzm1,'mod_holtbl:dza')
@@ -140,7 +142,7 @@ module mod_pbl_holtbl
     integer(ik4) :: i, j, k, n
     real(rkx) :: dudz, dvdz, ss, n2, rin, fofri, kzmh
     real(rkx) :: rrho, uflxsfx, vflxsfx, uu
-    real(rkx) :: sh10, oblen, vvk
+    real(rkx) :: oblen, vvk
     real(rkx) :: xfmt, wsc, therm, phpblm, zpbl, xfht
     real(rkx) :: z, zm, zp, zh, zl, wstr
     real(rkx) :: zzh, zzhnew, zzhnew2
@@ -250,26 +252,32 @@ module mod_pbl_holtbl
     ! calculate mixing ratio at 10m by assuming a constant
     ! value from the surface to the lowest model level.
     !
-    do concurrent ( j = jci1:jci2, i = ici1:ici2 )
-      if ( ifaholtth10 == 2 ) then
+    if ( ifaholtth10 == 2 ) then
+      do concurrent ( j = jci1:jci2, i = ici1:ici2 )
         thv10(j,i) = thvx(j,i,kz) + hfxv(j,i)/(vonkar*ustr(j,i)* &
                      log(m2p%za(j,i,kz)*d_r10))
-      else
+      end do
+    else
+      do concurrent ( j = jci1:jci2, i = ici1:ici2 )
         ! Compute specific humidity
         if ( m2p%ldmsk(j,i) == 1 ) then
-          sh10 = m2p%qxatm(j,i,kz,iqv)/(m2p%qxatm(j,i,kz,iqv)+d_one)
+          sh10(j,i) = m2p%qxatm(j,i,kz,iqv)/(m2p%qxatm(j,i,kz,iqv)+d_one)
         else
-          sh10 = pfqsat(m2p%tg(j,i),m2p%patmf(j,i,kzp1))
+          sh10(j,i) = pfqsat(m2p%tg(j,i),m2p%patmf(j,i,kzp1))
         end if
-        if ( ifaholtth10 == 1 ) then
+      end do
+      if ( ifaholtth10 == 1 ) then
+        do concurrent ( j = jci1:jci2, i = ici1:ici2 )
           thv10(j,i) = (0.25_rkx*m2p%thatm(j,i,kz) + &
-                        0.75_rkx*m2p%tg(j,i))*(d_one+ep1*sh10)
-        else
+                        0.75_rkx*m2p%tg(j,i))*(d_one+ep1*sh10(j,i))
+        end do
+      else
+        do concurrent ( j = jci1:jci2, i = ici1:ici2 )
           thv10(j,i) = (d_half*(m2p%thatm(j,i,kz)+m2p%tg(j,i))) * &
-                       (d_one + ep1*sh10)
-        end if
+                       (d_one + ep1*sh10(j,i))
+        end do
       end if
-    end do
+    end if
     do iter = 1, holtth10iter
       do concurrent ( j = jci1:jci2, i = ici1:ici2 )
         oblen = comp_obklen(thv10(j,i),ustr(j,i),hfxv(j,i))
@@ -288,13 +296,18 @@ module mod_pbl_holtbl
         end if
       end do
     end do
-    do concurrent ( j = jci1:jci2, i = ici1:ici2 )
-      if ( ifaholt == 1 ) then
+    if ( ifaholt == 1 ) then
+      do concurrent ( j = jci1:jci2, i = ici1:ici2 )
         thv10(j,i) = max(thv10(j,i),m2p%tg(j,i))  ! gtb add to maximize
-      else  if ( ifaholt  == 2 ) then
+      end do
+    else if ( ifaholt == 2 ) then
+      do concurrent ( j = jci1:jci2, i = ici1:ici2 )
         thv10(j,i) = min(thv10(j,i),m2p%tg(j,i))  ! gtb add to minimize
-      end if
-      ! final value for obukhov length
+      end do
+    end if
+
+    ! final value for obukhov length
+    do concurrent ( j = jci1:jci2, i = ici1:ici2 )
       obklen(j,i) = comp_obklen(thv10(j,i),ustr(j,i),hfxv(j,i))
     end do
     !
@@ -335,8 +348,13 @@ module mod_pbl_holtbl
     ! compute Bulk Richardson Number (BRN)
     !
     do concurrent ( j = jci1:jci2, i = ici1:ici2 )
+      ! Force stability above kmxpbl ( 5 km above ground )
       !$acc loop seq
-      do k = kzm1, kmxpbl(j,i), -1
+      do k = 1, kmxpbl(j,i)
+        ri(k,j,i) = 2.0_rkx * ricr(j,i)
+      end do
+      !$acc loop seq
+      do k = kmxpbl(j,i)+1, kzm1
         ri(k,j,i) = max(minri,min(maxri,egrav*(thvx(j,i,k)-thvx(j,i,kz)) * &
                     m2p%za(j,i,k)/(thv10(j,i)*vv(j,i,k))))
       end do
@@ -345,7 +363,8 @@ module mod_pbl_holtbl
     ! looking for first guess bl top
     do concurrent ( j = jci1:jci2, i = ici1:ici2 )
       p2m%zpbl(j,i) = m2p%za(j,i,kz)
-      do k = kzm1, kmxpbl(j,i) + 1, -1
+      !$acc loop seq
+      do k = kzm1, kmxpbl(j,i)+1, -1
         ! bl height lies between this level and the last
         ! use linear interp. of rich. no. to height of ri=ricr
         if ( (ri(k,j,i)   <  ricr(j,i)) .and. &
@@ -368,7 +387,7 @@ module mod_pbl_holtbl
         ri(kz,j,i) = max(minri,min(maxri, &
                     -egrav*therm * m2p%za(j,i,kz)/(thv10(j,i)*vvk)))
         !$acc loop seq
-        do k = kzm1, kmxpbl(j,i), -1
+        do k = kzm1, kmxpbl(j,i)+1, -1
           ri(k,j,i) = max(minri,min(maxri, &
                     egrav*(thvx(j,i,k)-thvx(j,i,kz)-therm) * &
                     m2p%za(j,i,k)/(thv10(j,i)*vv(j,i,k))))
@@ -380,7 +399,8 @@ module mod_pbl_holtbl
       if ( lunstb(j,i) ) then
         ! improve estimate of bl height under convective conditions
         ! using convective temperature excess (therm)
-        do k = kz, kmxpbl(j,i) + 1, -1
+        !$acc loop seq
+        do k = kz, kmxpbl(j,i)+1, -1
           ! bl height lies between this level and the last
           ! use linear interp. of rich. no. to height of ri=ricr
           if ( (ri(k,j,i) < ricr(j,i)) .and. &
@@ -411,6 +431,7 @@ module mod_pbl_holtbl
       if ( p2m%zpbl(j,i) < phpblm ) then
         p2m%zpbl(j,i) = max(phpblm,p2m%zpbl(j,i))
       end if
+      !$acc loop seq
       do k = kz, kmxpbl(j,i), -1
         p2m%kpbl(j,i) = k
         if ( m2p%za(j,i,k) > p2m%zpbl(j,i) ) exit
@@ -418,7 +439,7 @@ module mod_pbl_holtbl
     end do
 
     do concurrent ( j = jci1:jci2, i = ici1:ici2 )
-      zpbl = p2m%zpbl(j,i)
+      zpbl = min(p2m%zpbl(j,i),3000.0_rkx)
       fak1 = ustr(j,i)*zpbl*vonkar
       if ( lunstb(j,i) ) then
         xfmt = (d_one-binm*zpbl/obklen(j,i))**onet
@@ -431,6 +452,7 @@ module mod_pbl_holtbl
         wsc = d_zero
         fak2 = d_zero
       end if
+      !$acc loop seq
       do k = kz, p2m%kpbl(j,i), -1
         zm = m2p%za(j,i,k)
         zp = m2p%za(j,i,k-1)
@@ -985,7 +1007,7 @@ module mod_pbl_holtbl
       end do
       do concurrent ( j = jci1:jci2, i = ici1:ici2, k = 2:kz )
         ttnp(j,i,k) = hydf(j,i,k)*rhohf(j,i,k-1) * &
-                          kvh(j,i,k)*cgs(j,i,k)*xqfx(j,i)
+                          kvq(j,i,k)*cgs(j,i,k)*xqfx(j,i)
       end do
       !
       !   compute the tendencies:

@@ -180,11 +180,6 @@ module mod_runparams
   logical, parameter, public :: moloch_do_test_1 = .false.
   logical, parameter, public :: moloch_do_test_2 = .false.
   real(rkx), public :: mo_dzita
-  logical, public :: mo_divfilter = .true.
-  logical, public :: mo_divdamp = .true.
-  logical, public :: mo_spectral_nudging = .true.
-  integer(ik4), public :: mo_nadv
-  integer(ik4), public :: mo_nsound
 
   real(rkx), public :: dt, dt2, dtsq, dtcb, dtbdys, rdt
   real(rkx), public :: dx, dx2, dx4, dx8, dx16, dxsq
@@ -545,15 +540,18 @@ module mod_runparams
   ! option for writing tendency diagnostic
   integer(ik4), public :: idiag
   integer(ik4), public :: icosp
+  integer(ik4), public :: diaghfs
+  real(rkx), public :: diaghf
 
   data doing_restart /.false./
 
   public :: allocate_mod_runparams
   public :: iswater, isocean, islake
   public :: exponential_nudging
-  public :: relax_coefficients
+  public :: relax_coefficients, newrelax
   public :: outward_velocity
   public :: adaptive
+  public :: invert_top_bottom
 
   contains
 
@@ -693,6 +691,61 @@ module mod_runparams
     end do
   end subroutine relax_coefficients
 
+  subroutine newrelax(np,gmmin,gmmax,coeffs)
+    implicit none
+    integer(ik4), intent(in) :: np
+    real(rkx), intent(in) :: gmmin, gmmax
+    real(rkx), dimension(np), intent(out) :: coeffs
+
+    integer(ik4) :: i, ic, iscale, ip
+    real(rkx) :: c_val, max_ref, min_max_ref, current_ref
+    real(rkx) :: p, pscale, best_p, best_scale
+    integer(ik4), parameter :: ns = 40
+    real(rkx) :: c_grid(ns)
+    real(rkx) :: test_k(np)
+
+    do ic = 1, ns
+      if (ns > 1) then
+        c_grid(ic) = gmmin + (gmmax-gmmin) * real(ic-1)/real(ns-1)
+      else
+        c_grid(ic) = gmmin
+      end if
+    end do
+
+    min_max_ref = 1.0e30_rkx
+    best_p = 2.0_rkx
+    best_scale = 0.5_rkx
+
+    do iscale = 1, 20
+      pscale = 0.05_rkx + real(iscale-1) * 0.05_rkx
+      do ip = 1, 31
+        p = 1.0_rkx + real(ip-1) * 0.1_rkx
+        do i = 1, np
+          test_k(i) = pscale * (real(np-i)/real(np-1))**p
+        end do
+        max_ref = 0.0_rkx
+        do ic = 1, ns
+          c_val = c_grid(ic)
+          current_ref = 0.0_rkx
+          do i = 1, np - 1
+            current_ref = current_ref + abs(test_k(i) - test_k(i+1)) / &
+                          (c_val + 0.5_rkx * (test_k(i) + test_k(i+1)))
+          end do
+          current_ref = current_ref + test_k(np)/(c_val+0.5_rkx * test_k(np))
+          if (current_ref > max_ref) max_ref = current_ref
+        end do
+        if (max_ref < min_max_ref) then
+          min_max_ref = max_ref
+          best_p = p
+          best_scale = pscale
+        end if
+      end do
+    end do
+    do i = 1, np
+      coeffs(i) = best_scale * (real(np-i)/real(np-1))**best_p
+    end do
+  end subroutine newrelax
+
   subroutine outward_velocity(j1,j2,i1,i2,k1,k2,jmax,imax,nspg,u,v,unorm)
     implicit none
     integer(ik4), intent(in) :: j1, j2, i1, i2, k1, k2
@@ -747,6 +800,19 @@ module mod_runparams
     cnew = coeff * (0.5_rkx * &
       ((1.0_rkx+outflow) - (1.0_rkx-outflow)*tanh(unorm/vscale)))
   end function adaptive
+
+  subroutine invert_top_bottom(v)
+    implicit none
+    real(rkx), dimension(:), intent(inout) :: v
+    real(rkx), dimension(size(v)) :: swap
+    integer(ik4) :: nk, k, kk
+    swap(:) = v(:)
+    nk = size(v)
+    do k = 1, nk
+      kk = nk-k+1
+      v(k) = swap(kk)
+    end do
+  end subroutine invert_top_bottom
 
 end module mod_runparams
 ! vim: tabstop=8 expandtab shiftwidth=2 softtabstop=2

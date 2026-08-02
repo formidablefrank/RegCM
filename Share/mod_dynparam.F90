@@ -23,6 +23,7 @@ module mod_dynparam
 #ifndef PNETCDF
   use netcdf
 #endif
+  use mpi_f08, only : mpi_comm
 
   implicit none
 
@@ -137,8 +138,9 @@ module mod_dynparam
   ! nspgx-1,nspgd-1 represent the number of cross/dot point slices
   ! on the boundary sponge or relaxation boundary conditions.
 
-  integer(ik4), public :: nspgx = 12
-  integer(ik4), public :: nspgd = 12
+  logical, public :: bdy_use_lehmann = .false.
+  integer(ik4), public :: nspgx = 6
+  integer(ik4), public :: nspgd = 6
 
   real(rkx), public :: bdy_nm = -1.0_rkx ! 0.0033_rkx
   real(rkx), public :: bdy_dm = -1.0_rkx ! 0.0001_rkx
@@ -201,6 +203,12 @@ module mod_dynparam
   real(rkx), public :: mo_ztop = 30000.0_rkx
   real(rkx), public :: mo_h = 8000.0_rkx
   real(rkx), public :: mo_a0 = 0.0_rkx
+  logical, public :: mo_divfilter = .true.
+  logical, public :: mo_divdamp = .true.
+  logical, public :: mo_top_nudge = .false.
+  logical, public :: mo_spectral_nudge = .true.
+  integer(ik4), public :: mo_nadv = 2
+  integer(ik4), public :: mo_nsound = 5
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! End of configureation. Below this point things are
@@ -306,7 +314,7 @@ module mod_dynparam
 
   !####################### MPI parameters ################################
 
-  integer(ik4), public :: mycomm
+  type(mpi_comm), public :: mycomm
   integer(ik4), public :: nproc, nprocshm
   integer(ik4), public :: myid, myidshm
   integer(ik4), public :: njxcpus, niycpus
@@ -491,10 +499,12 @@ module mod_dynparam
     integer(ik8) :: gdate1, gdate2
     integer(ik4) :: iresult
     integer(ik4) :: ipunit
+    integer(ik4) :: isp
 
     namelist /dimparam/ iy, jx, kz, dsmax, dsmin, nsg, njxcpus, niycpus
     namelist /coreparam/ idynamic
-    namelist /molochparam/ mo_a0, mo_ztop, mo_h
+    namelist /molochparam/ mo_a0, mo_ztop, mo_h, mo_divfilter, &
+      mo_divdamp, mo_spectral_nudge, mo_top_nudge, mo_nadv, mo_nsound
     namelist /geoparam/ iproj, ds, ptop, clat, clon, plat,    &
       plon, cntri, cntrj, truelatl, truelath, i_band, i_crm
     namelist /terrainparam/ domname, lresamp, smthbdy, nsmthbdy, &
@@ -503,8 +513,8 @@ module mod_dynparam
       ismthlev, dirter, inpter, moist_filename, tersrc, smsrc,   &
       texsrc, roidem, lclm45lake
     namelist /debugparam/ debug_level, dbgfrq
-    namelist /boundaryparam/ nspgx, nspgd, high_nudge, &
-      medium_nudge, low_nudge, bdy_nm, bdy_dm
+    namelist /boundaryparam/ bdy_use_lehmann, nspgx, nspgd, &
+      high_nudge, medium_nudge, low_nudge, bdy_nm, bdy_dm
     namelist /globdatparam/ dattyp, chemtyp, ssttyp, gdate1, gdate2, &
       dirglob, inpglob, calendar, ibdyfrq, ensemble_run
     namelist /cmip6param/ cmip6_inp, cmip6_model, cmip6_experiment, &
@@ -753,8 +763,8 @@ module mod_dynparam
     ! Let us assume a "default" for the selected ds, not getting less
     ! than the OK number of points. If the domain is REALLY small,
     ! use 1/4 of the overall points, or AT LEAST 3 points...
-    nspgx = max(min(max(int(real(nspgx*50,rkx)/ds),nspgx),min(jx,iy)/4),3)
-    nspgd = max(min(max(int(real(nspgd*50,rkx)/ds),nspgd),min(jx,iy)/4),3)
+    nspgx = max(min(max(int(real(nspgx*50,rkx)/ds),nspgx),min(jx,iy)/4),6)
+    nspgd = max(min(max(int(real(nspgd*50,rkx)/ds),nspgd),min(jx,iy)/4),6)
     ! Anyway the user specify this...
     rewind(ipunit)
     read(ipunit, nml=boundaryparam, iostat=iresult)
@@ -762,8 +772,18 @@ module mod_dynparam
       ! We have defaults
     end if
     ! Just double check ;)
-    nspgx = max(nspgx,3)
-    nspgd = max(nspgd,3)
+    nspgx = max(nspgx,6)
+    nspgd = max(nspgd,6)
+    if ( idynamic == 3 .and. bdy_use_lehmann ) then
+      ! It must be a power of 2 + 2 points (first,last with weights 1,0)
+      nspgx = min(max(6, nint(20.0_rkx * (ds**(-0.35_rkx)))+1),34)
+      isp = 1
+      do while (isp < nspgx-2 )
+        isp = isp * 2
+      end do
+      nspgx = isp+2
+      nspgd = nspgx
+    end if
 
     ibdyfrq = 6 ! Convenient default
     dattyp = 'UNKNW'
