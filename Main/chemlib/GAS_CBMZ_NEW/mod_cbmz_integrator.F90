@@ -30,6 +30,10 @@ module mod_cbmz_integrator
   use mod_cbmz_parameters, only : nvar, nfix, lu_nonzero
   use mod_cbmz_jacobiansp, only : lu_diag
   use mod_cbmz_linearalgebra, only : kppdecomp, kppsolve
+  use mod_intkinds, only : ik4
+#ifdef DEBUG
+  use mod_service, only : time_begin, time_end, dbgslen
+#endif
 
   implicit none
   public
@@ -158,6 +162,11 @@ module mod_cbmz_integrator
 
     real(kind=dp) :: rcntrl(20), rstatus(20)
     integer       :: icntrl(20), istatus(20), ierr
+#ifdef DEBUG
+    character(len=dbgslen) :: subroutine_name = 'cbmz_integrate'
+    integer(ik4) :: indx = 0
+    call time_begin(subroutine_name,indx)
+#endif
 
     icntrl(:)  = 0
     rcntrl(:)  = 0.0_dp
@@ -190,6 +199,9 @@ module mod_cbmz_integrator
         ierr_u = ierr
       endif
     endif
+#ifdef DEBUG
+    call time_end(subroutine_name,indx)
+#endif
   end subroutine integrate
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 !
