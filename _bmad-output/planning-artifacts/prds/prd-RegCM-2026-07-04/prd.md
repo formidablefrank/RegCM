@@ -367,6 +367,49 @@ Namelist documentation (e.g., `Doc/README.namelist` or equivalent) is updated to
 **Consequences (testable):**
 - A user reading the updated documentation before running an unedited `Testing/*.in` fixture is warned about placeholder paths before encountering the failure FR-18 now catches faster.
 
+#### FR-41: Container build and run documentation for users and developers
+
+User-facing documentation explains pulling and running Feature 4.8's production container images (GNU, Intel, NVHPC/CUDA) to execute RegCM5 without a native build. Developer-facing documentation explains building and using the same images, on a basic workstation or on HPC, to set up a contribution environment — per FR-40, no separate lightweight image exists.
+
+**Consequences (testable):**
+- A user with no RegCM5 build experience runs a `Testing/` fixture inside a pulled container image by following this documentation alone.
+- A contributor without HPC access builds a production image locally via Docker and compiles a code change inside it by following this documentation alone.
+
+#### FR-48: Tools/ scripts and programs documentation
+
+Document the purpose, inputs, and invocation of every utility under `Tools/Programs/` and `Tools/Scripts/` — excluding `TestingAndBenchmarking/` (already Feature 4.7's territory) and `regcm_postproc-0.0.1` (an explicit Non-User of this program, §2.2) — in one findable catalog, linking to existing per-subfolder documentation (e.g. `pycordexer/README.rst`) rather than duplicating it.
+
+**Consequences (testable):**
+- A single catalog document lists every covered utility/script group by purpose, with a one-line description and an invocation example.
+- Existing per-subfolder documentation is linked from, not copied into, the catalog.
+
+#### FR-49: Tools/ build and run ergonomics
+
+A per-subfolder audit identifies which `Tools/Programs`/`Tools/Scripts` groups lack a build or dependency-declaration file, and adds one where it removes real friction: a top-level `Tools/Programs/Makefile` building every existing per-utility Makefile without modifying any of them; `c++read`'s hand-written Makefile (hardcoded `g++`, an external `ncxx4-config` dependency, no `Makefile.am`/`Makefile.in`) is normalized to the same autotools pattern already used by `CheckSun`, `RegCM_read`, and `timeseries`, preserving its existing `ncxx4-config`-based netCDF-C++4 dependency detection; and one `requirements.txt` per Python tool group (`Tools/Scripts/Python/`, `pyplotter/`, `pyrunner/`) reflecting each group's actual imports, found by audit rather than assumed.
+
+**Consequences (testable):**
+- A top-level `Tools/Programs/Makefile` builds all 11 existing utilities without modifying any per-utility Makefile.
+- `c++read` builds via `Makefile.am` → `Makefile.in` → `Makefile`, matching the other utilities' pattern, still detecting netCDF-C++4 via `ncxx4-config`.
+- `Tools/Scripts/Python/`, `pyplotter/`, and `pyrunner/` each gain their own `requirements.txt`; `pycordexer/`'s existing Makefile is left unmodified.
+
+#### FR-51: Contributor guide for an open-source scientific codebase
+
+A `CONTRIBUTING.md` explains how to propose a change to RegCM5: the project's existing acceptance discipline (Build/Test/Numerical/Performance record, NFR-10), the review/sign-off model (regcm5-dev's sole scientific sign-off), and pointers to `project-context.md` and the Dev Guide as the source of truth for coding conventions — referenced, not duplicated, avoiding the same drift risk FR-21 already corrects elsewhere.
+
+**Consequences (testable):**
+- A first-time contributor reading `CONTRIBUTING.md` finds the acceptance discipline and sign-off model stated plainly, with pointers to (not a copy of) `project-context.md`'s rules.
+
+#### FR-52: Issue and merge-request rules and templates
+
+`.github/ISSUE_TEMPLATE/` and `.github/PULL_REQUEST_TEMPLATE.md` codify what an issue or merge request needs: for an issue, reproduction steps plus the `Testing/` fixture and compiler/vendor combination involved; for a merge request, the same Build/Test/Numerical/Performance record NFR-10 already requires, plus an explicit statement that a green CI check (Feature 4.9) is necessary but not sufficient for merge (AD-4).
+
+**Consequences (testable):**
+- An issue opened via the template includes reproduction steps and the fixture/compiler combination by construction.
+- A pull request opened via the template prompts for the Build/Test/Numerical/Performance record and states plainly that CI passing alone is not sufficient for merge.
+
+**Feature-specific NFRs:**
+- NFR-14: All documentation produced or corrected under this program is written in a register consistent with scholarly books and peer-reviewed journal articles: established words only, no invented terms, no fancy hyphenated compounds; short, simple, concise, and direct without significant loss of information; grammatically correct. This extends the project's existing agent communication-style convention (`project-context.md`) to authored documentation content itself, not only conversational responses. Applies to every documentation-authoring story in this feature (FR-21, FR-23, FR-38, FR-41, FR-48, FR-51, FR-52) and to Features 4.11 and 4.12's documentation FRs.
+
 ### 4.7 Automated Regression Infrastructure
 
 **Description:** RegCM5 has no working *automated, wired-into-the-build* regression-diff tool today: `Tools/Scripts/BuildBot/testing.py` is dead Python 2, and `Tools/Scripts/TestingAndBenchmarking/preproc-compare.py` only compares ICBC initial conditions between RegCM v3 and v4 for 1-month simulations, not general model output. There is, however, existing prior art worth building on rather than replacing: the source thesis (`_bmad-source/regcm5-optimization.pdf`, Appendix B) documents a working Python/NCO reproducibility-diagnostic workflow (`concat_diff_var.py`, `multi_day_stats_generic.py`, `spatial_maps_generic.py`, run inside an `nco-tools` conda environment atop `ncrcat`/`ncdiff`/`ncap2`) that already computes exactly the statistical divergence metrics — mean absolute difference (MAD), root-mean-square error (RMSE), and their scale-relative forms rMAD/rRMSE — this feature needs. This feature hardens and wires in that existing workflow as the project's regression-diff tool, rather than building an unrelated one from scratch. `[ASSUMPTION: "CI" here means an automated regression-diff tool invocable on demand (as a Slurm job or login-node script) against Testing/ fixtures, not an always-on triggered pipeline — the project has no existing trigger infrastructure and the login-node fair-use policy constrains unattended automation. See Open Question 6 to confirm.]`
@@ -438,6 +481,14 @@ A third container variant, alongside FR-28's GNU and Intel images, exists suppor
 **Consequences (testable):**
 - The GPU-enabled image runs a `do concurrent`-accelerated RegCM5 build and produces output matching the CPU-path baseline within the project's tolerance policy, on at least one system with a CUDA 12+ GPU.
 
+#### FR-40: Production container images double as the contributor development environment
+
+Each production image (FR-28's GNU/Intel, FR-30's NVHPC/CUDA) runs under plain Docker on a non-HPC, non-GPU workstation, not only via Apptainer on Leonardo. The NVHPC/CUDA image specifically builds and runs RegCM5's CPU-only path (`-stdpar=multicore`) without requiring GPU hardware to be present. No separate lightweight development image is maintained — one set of images serves both production validation and contributor development.
+
+**Consequences (testable):**
+- Each of the GNU, Intel, and NVHPC/CUDA images builds and runs a `Testing/` fixture under plain Docker on a workstation with no HPC scheduler and, for the NVHPC/CUDA image, no GPU present.
+- The NVHPC/CUDA image's CPU-only path produces output matching the GNU/Intel images' output within the project's bit-exact-by-default cross-vendor portability policy, confirming it is usable for development without GPU hardware.
+
 **Out of Scope:** Non-NVIDIA GPU vendor containers (AMD ROCm, Intel oneAPI) are out of scope — the project's own AMD support is already "where feasible," not mandatory (§5).
 
 **Feature-specific NFRs:**
@@ -470,6 +521,157 @@ NVHPC build verification (compilation only) runs in GitHub Actions where a suita
 
 **Feature-specific NFRs:**
 - A passing GitHub Actions run is necessary but not sufficient evidence of this project's full acceptance discipline; final numerical/performance acceptance for anything touching physics, dynamics, or accelerator code still requires validation on the target HPC partitions per Constraints and Guardrails.
+
+### 4.11 Contributor Unit Testing Framework
+
+**Description:** RegCM5 has no unit-test framework at the model level today — testing is full-model integration runs driven by namelists (per the governing project context), and a pFUnit-style test directory exists only inside bundled, deprecated CLM3.5 code, not RegCM5's own. This feature adopts pFUnit as RegCM5's own unit-test framework, scoped narrowly to pure, side-effect-free routines with no dependency on module-scope state from model initialization — narrowing, not reversing, the project's existing testing-boundary rule, since stateful physics/dynamics/I/O code remains validated only by full-model integration runs (Feature 4.7).
+
+**Functional Requirements:**
+
+#### FR-42: Adopt pFUnit and establish a unit-test pattern
+
+A pFUnit-based unit-test target is wired into the Autotools build (e.g. `make check` or equivalent), building and executing independent of any `Testing/` fixture.
+
+**Consequences (testable):**
+- Running the unit-test target builds and executes the unit-test suite, reporting pass/fail per test case, without requiring a `Testing/` fixture run.
+- The governing project context's Testing Rules section, which currently states no isolated unit tests exist for physics/dynamics routines, is corrected to describe this feature's narrowed scope explicitly, not simply reversed.
+
+#### FR-43: Author an initial unit-test suite for representative pure routines
+
+An initial unit-test suite covers `getcape_new` (`Share/mod_capecin.F90`), `interp1d_r8` (`Share/mod_interp.F90`), and `heatindex` (`Share/mod_heatindex.F90`) — three routines already confirmed `pure` under the project's merged GPU-offload pattern.
+
+**Consequences (testable):**
+- Each of the three routines has at least one unit test exercising representative input/output pairs, independent of a full model run.
+- The suite passes against an unchanged codebase, establishing a clean starting baseline.
+
+**Out of Scope:** Unit-test coverage for stateful physics/dynamics/I/O routines is out of scope for this feature — such code remains validated only by Feature 4.7's full-model integration runs.
+
+#### FR-50: Unit and integration tests for Tools/ scripts and programs
+
+Following the same pure-routine-vs-full-run split established for the core model (FR-42/FR-43), `Tools/Programs`' and `Tools/Scripts`' testable pure functions gain unit tests (pFUnit for Fortran, pytest for Python), and every utility/script gains an integration smoke test — run against a small sample input, confirming successful completion and expected output — matching the project's own "smallest trustworthy test is a full run" convention for non-pure code.
+
+**Consequences (testable):**
+- A `Tools/Programs` utility or `Tools/Scripts` script with at least one pure, side-effect-free function has a unit test for that function, independent of running the whole utility.
+- Every utility/script this FR covers has an integration smoke test confirming successful completion and expected output against a small sample input — not full correctness verification.
+- This FR depends on FR-49's build/dependency normalization landing first, including exercising `c++read`'s normalized autotools build rather than its old hand-written Makefile.
+
+#### FR-44: Contributor testing documentation
+
+Documentation explains how to run both the new unit-test suite (FR-42/FR-43) and Feature 4.7's existing regression-diff/baseline tooling, stating which applies to which kind of change.
+
+**Consequences (testable):**
+- A contributor changing a pure utility routine is directed to the unit-test suite as the fast first check.
+- A contributor changing stateful physics/dynamics/I/O code is directed to Feature 4.7's regression-diff workflow against a `Testing/` fixture.
+
+**Feature-specific NFRs:**
+- NFR-15: Unit-test scope is limited to pure, side-effect-free routines with no dependency on module-scope state populated by model initialization; stateful physics/dynamics/I/O code remains validated only by full-model integration runs (Feature 4.7), per the project's existing testing-boundary rule. This feature narrows, not reverses, that rule. FR-50 extends this same narrowed scope to `Tools/Programs` and `Tools/Scripts`, not only the core model.
+- Documentation under this feature follows NFR-14's register.
+
+**Notes:** `[NOTE FOR PM]` Introducing a unit-test framework reverses a fact the governing project context currently states as a deliberate, described project convention ("no meaningful unit vs. integration split"). This is a testing-boundary policy change requiring regcm5-dev's explicit sign-off (Constraints and Guardrails), recorded in Story 2.1's acceptance record — not merely a tooling addition.
+
+### 4.12 ADIOS2 I/O Backend
+
+**Description:** This feature extends RegCM5's diagnostic, restart, and CLM land-model output paths with ADIOS2 (Adaptable I/O System 2) as an additional, opt-in output backend alongside the existing netCDF/PnetCDF path (Feature 4.2), following the same non-default, per-path opt-in discipline already established there. Unlike Feature 4.2's PnetCDF work — a different write mechanism producing the same NetCDF file format — ADIOS2 writes its own BP (Binary Pack) format, a genuinely different output format requiring its own comparison plan, not only a new write path.
+
+**Functional Requirements:**
+
+#### FR-45: Evaluate and design ADIOS2 integration
+
+A scoped design specifies a build-time flag (`--enable-adios2`), three independent opt-in namelist switches (`do_adios2_hist`, `do_adios2_rst`, `do_adios2_clm`, matching the project's existing per-path namelist-switch convention) covering diagnostic/history, restart/checkpoint, and CLM land-model history output, and a stated plan for comparing ADIOS2's BP output against the existing NetCDF baseline for each path.
+
+**Consequences (testable):**
+- The design document names the build flag, all three namelist switches, and the ADIOS2 library version to pin, matching the project's existing version-pinning table.
+- The design states explicitly whether the regression-diff tool (Feature 4.7) will be extended to read BP directly or whether a BP-to-NetCDF conversion step precedes comparison — not left unstated.
+
+#### FR-46: Implement ADIOS2 parallel write for diagnostic, restart, and CLM land-model output, opt-in
+
+Diagnostic/history, restart/checkpoint, and CLM land-model history output (when land coupling is active) support writing via ADIOS2 when each path's namelist switch is set and the build is configured with `--enable-adios2`, shipped as tested and opt-in — not a promoted default.
+
+**Consequences (testable):**
+- A `Testing/` fixture run with a given path's ADIOS2 switch enabled produces output whose field values agree with the equivalent netCDF/PnetCDF run at `nproc=1` and `nproc=4`, using the comparison method FR-45 specifies.
+- A build without `--enable-adios2`, or a run that doesn't set a given path's switch, uses the existing netCDF/PnetCDF path unmodified — no observable change for that path.
+
+**Out of Scope:** ADIOS2 support for boundary-condition/ICBC input reads is out of scope — this feature covers output paths only.
+
+#### FR-47: ADIOS2 backend documentation
+
+Documentation covers the build flag, all three namelist switches, and how to read or convert BP output for downstream consumers (PostProc, external analysis pipelines).
+
+**Consequences (testable):**
+- A reader unfamiliar with ADIOS2 can enable it for a chosen output path and read or convert its BP output by following this documentation alone.
+
+**Feature-specific NFRs:**
+- NFR-16: ADIOS2's BP format is not NetCDF-compatible by default. Any "bit-exact against baseline" claim under this feature must state explicitly how the comparison was made — native BP-aware compare, or BP-to-NetCDF conversion first. An unstated or assumed-compatible comparison is not acceptable evidence.
+- Documentation under this feature follows NFR-14's register.
+
+### 4.13 Continuous Quality Gates: Performance, Memory-Safety, and Dependency Security
+
+**Description:** Epic 4's Story 4.6 (Valgrind memory check) and FR-4's baseline (profiling) are one-time investigations; this feature turns the memory-safety half into a repeatable CI gate and extends performance acceptance into a two-tier gate — a coarse, automatic CI smoke check plus required Slurm-based evidence for hot-path changes, extending AD-4/NFR-9's existing "CI necessary, not sufficient" principle rather than overriding it. It also adds dependency and container vulnerability scanning, scoped to what this codebase actually distributes (Python tooling, container images), consistent with `project-context.md`'s existing position that the Fortran physics core is not a meaningful attack surface in the usual sense.
+
+**Functional Requirements:**
+
+#### FR-53: Memory-leak and memory-safety regression gate
+
+Story 4.6's Valgrind Memcheck pass is turned into a repeatable CI check against `Testing/ideal.in` (AD-11), failing only on new findings relative to Story 4.6's recorded baseline. A GNU `-fsanitize=address,undefined` build variant runs the same fixture as a distinct, complementary check for out-of-bounds array access and undefined behavior.
+
+**Consequences (testable):**
+- A pull request introducing a new Valgrind-detected leak or error (not present in Story 4.6's recorded baseline) fails this gate; a pre-existing finding already logged as a scoped follow-up does not.
+- A pull request introducing a sanitizer-detected out-of-bounds access or undefined-behavior finding fails this gate, reported separately from the Valgrind check.
+
+#### FR-54: Two-tier performance regression gate
+
+A coarse, automatic CI timing check runs `Testing/ideal.in` against a stored wall-clock baseline with a generous tolerance band, failing only on gross regression. For changes touching a subsystem FR-4's baseline profiled as a hotspot, or touching dynamics/I/O/GPU code, a Slurm-based performance run against AD-8's canonical EUR12 baseline is required evidence in the pull request, checked by regcm5-dev at review (NFR-10) — not automatically enforced by CI.
+
+**Consequences (testable):**
+- A pull request's CI run reports `Testing/ideal.in`'s wall-clock time against the stored baseline, failing only when the regression exceeds the documented tolerance band.
+- A pull request touching a profiled hotspot or dynamics/I/O/GPU code carries Slurm-based performance evidence against AD-8's canonical baseline before merge, per the pull-request template (FR-52); a change that doesn't touch such code states explicitly why the requirement is waived, rather than being blocked by default.
+
+#### FR-55: Dependency and container vulnerability scanning
+
+Every `requirements.txt` added under FR-49/FR-44 is scanned for known-vulnerable pinned dependencies in CI. Every container image (FR-28/FR-30) is scanned for known-vulnerable packages as part of its build pipeline.
+
+**Consequences (testable):**
+- A pull request changing a `requirements.txt` file fails this gate if it pins a known-vulnerable dependency version.
+- A container image build fails this gate if it contains a known-vulnerable package, reported as part of the container-build pipeline, not the main model build.
+
+**Feature-specific NFRs:**
+- NFR-17: The performance gate's CI tier is coarse and non-authoritative by design, per AD-4/NFR-9 — it may never be treated as sufficient evidence for a performance claim on its own; the Slurm-evidence tier remains required for hot-path changes.
+- NFR-18: The memory-safety gate blocks only on new findings relative to Story 4.6's recorded baseline; pre-existing findings already logged as scoped follow-ups do not retroactively block unrelated merges.
+- Documentation under this feature follows NFR-14's register.
+
+### 4.14 Code Duplication Audit and Generic-Interface Consolidation
+
+**Description:** `Main/mpplib/mod_mppparam.F90` alone contains 42 duplicate-named subroutines split across a real4/real8 type axis and a 2D/3D/4D rank axis (`exchange_array_r4`/`_r8`, `real8_2d/3d/4d_distribute`/`real4_...`, and similar families); `mod_ncout.F90`/`mod_ncstream.F90` carry a parallel rank-duplication pattern (`setup_var_2d`/`_3d`/`_4d`, `writevar2d/3d/4d_output_stream`). Both are already wrapped in generic interfaces at the call site (`interface exchange_array`, `interface setup_var`) — the established idiom in this codebase — but the bodies underneath remain hand-duplicated. This feature audits the codebase for this pattern and consolidates confirmed candidates using compile-time mechanisms only, never runtime polymorphism, since this codebase's GPU-porting strategy (AD-3) depends on every `do concurrent`/OpenACC-offloaded code path reaching concrete, monomorphic types. `assignpnt` (`Share/mod_memutil.F90`) already uses a generic interface and is this project's own documented "#1 GPU-porting risk" (`project-context.md`); it is audited for completeness but excluded from consolidation scope.
+
+**Functional Requirements:**
+
+#### FR-56: Audit source code for type- and rank-duplicated routines
+
+A repository-wide audit inventories candidate routine families across communication, pointer-assignment, computation, and I/O code, scoring each for duplication pattern (type-axis, rank-axis, or both), GPU-porting risk (whether any offloaded code path reaches it), and consolidation feasibility, producing a written go/no-go per candidate family.
+
+**Consequences (testable):**
+- A written inventory names every candidate routine family, its duplication pattern, its GPU-porting risk, and a go/no-go recommendation — not a blanket "refactor everything" conclusion.
+- `assignpnt` appears in the inventory marked no-go, with its GPU-porting-risk status as the stated reason.
+
+#### FR-57: Consolidate communication-layer duplicated routines
+
+Gated on FR-56's audit, the confirmed subset of `mod_mppparam.F90`'s duplicate-named subroutines are consolidated into fewer hand-maintained bodies via compile-time mechanisms only, with every existing public interface name and signature preserved unchanged.
+
+**Consequences (testable):**
+- Every consolidated routine produces bit-exact output relative to its pre-refactor body (AD-1).
+- The change is regression-checked at `nproc=1` and `nproc=4` minimum (AD-12/AD-13), since this is halo-exchange-adjacent code.
+- No public interface name or signature changes — zero behavior change for any existing caller.
+
+#### FR-58: Consolidate I/O-layer duplicated routines
+
+Gated on FR-56's audit and sequenced after Feature 4.2's Story 11.3/11.4 and Feature 4.12's Story 12.2 complete, the confirmed subset of `mod_ncout.F90`/`mod_ncstream.F90`'s rank-duplicated routines are consolidated the same way.
+
+**Consequences (testable):**
+- This FR does not begin before Epic 11's and Epic 12's own changes to these files have landed, avoiding concurrent edits to the same files that would confound each epic's regression evidence.
+- Same bit-exactness and public-interface-preservation consequences as FR-57.
+
+**Feature-specific NFRs:**
+- NFR-19: Consolidation must never introduce `class(*)`/`select type` runtime polymorphism into or near a `do concurrent`/OpenACC-offloaded code path (AD-26). A behavioral divergence discovered between previously-duplicated bodies is flagged for regcm5-dev's review as a found bug, not silently "fixed" as part of the refactor.
 
 ## 5. Non-Goals (Explicit)
 
@@ -514,6 +716,17 @@ NVHPC build verification (compilation only) runs in GitHub Actions where a suita
 - FR-17 (BMI resolution)
 
 *This phase has no technical dependency on Phases 1–3 — it is sequenced last by priority choice (solo pacing, no external deadline), not necessity.*
+
+### Phase 5 — Contributor Infrastructure (independent track, sequenced last)
+- FR-40, FR-41 (production containers double as the development environment; build/run documentation)
+- FR-42, FR-43, FR-44 (unit-test framework, initial suite, contributor testing documentation)
+- FR-45, FR-46, FR-47 (ADIOS2 opt-in I/O backend across diagnostic/restart/CLM output, documentation)
+- FR-48, FR-49, FR-50 (Tools/ documentation, build/dependency ergonomics, unit and integration tests)
+- FR-51, FR-52 (contribution guide, issue and merge-request templates)
+- FR-53, FR-54, FR-55 (memory-safety regression gate, two-tier performance regression gate, dependency/container vulnerability scanning)
+- FR-56, FR-57, FR-58 (duplication audit, communication-layer consolidation, I/O-layer consolidation sequenced after Phase 2's FR-5/FR-33 and Phase 5's FR-46)
+
+*This phase has no technical dependency on Phases 1–4 — sequenced last by default, per the 2026-08-11 Sprint Change Proposals; revisit if contributor onboarding should be prioritized earlier. FR-58 specifically must not start before FR-5/FR-33 (Epic 11) and FR-46 (Epic 12) land, regardless of overall phase sequencing.*
 
 **Out of scope for all phases:** see §5 Non-Goals.
 
@@ -647,4 +860,9 @@ A breaking change to any live contract's field list or behavior (OASIS3-MCT, REG
 - §4.8 — An AMD/AOCC CPU container variant is not included by default, consistent with AMD being a "where feasible" target rather than mandatory (§5).
 - §4.9 — GitHub-hosted runners are assumed to have no GPU/CUDA access, so triggered CI defaults to CPU-path coverage only; confirmed as permanent scope, not merely an assumption, by regcm5-dev (Open Question 7, resolved).
 - §7 — No numeric performance targets are set pending Phase 1's baseline; this is a deliberate scoping choice, not an oversight.
-- §4.1 (epics-level addition) — FR-39 (Valgrind memory-leak/error check, under Epic 1) does not originate in this PRD. It was added directly during epic creation at franco's explicit request. Recorded here for traceability, not because this PRD itself scopes it.
+- §4.1 (epics-level addition) — FR-39 (Valgrind memory-leak/error check, under Epic 4) does not originate in this PRD. It was added directly during epic creation at franco's explicit request. Recorded here for traceability, not because this PRD itself scopes it.
+- §4.6, §4.8, §4.11, §4.12 — FR-40 through FR-47, NFR-14 through NFR-16, and Phase 5 do not originate from the original Discovery/Phase 1-4 research. They were added via a Sprint Change Proposal (`sprint-change-proposal-2026-08-11.md`) at franco's explicit request, covering contributor container onboarding, a unit-testing framework, and an ADIOS2 I/O backend. FR-42's unit-test framework specifically reverses a testing-boundary convention this PRD's own governing project context previously stated as deliberate — see Epic 2's Story 2.1 for the required sign-off record.
+- §4.6, §4.11 — FR-48 through FR-52 also do not originate from the original Discovery research. They were added via a second Sprint Change Proposal on the same day (`sprint-change-proposal-2026-08-11-tools-contributing.md`) at franco's explicit request, covering `Tools/` documentation and build ergonomics, unit/integration tests for `Tools/` code, and a contribution guide with issue/merge-request templates. FR-50 depends on FR-49 landing first.
+- §4.13 — FR-53 through FR-55, NFR-17, and NFR-18 also do not originate from the original Discovery research. They were added via a third Sprint Change Proposal on the same day (`sprint-change-proposal-2026-08-11-quality-gates.md`) at franco's explicit request. FR-54's two-tier performance gate design, and FR-55's scoping to dependency/container exposure rather than the Fortran core, were both deliberately resolved against this PRD's own existing AD-4/NFR-9 (CI necessary-not-sufficient) and `project-context.md`'s existing "not a meaningful attack surface" position — extending, not overriding, both.
+- §4.14 — FR-56 through FR-58 and NFR-19 also do not originate from the original Discovery research. They were added via a fourth Sprint Change Proposal on the same day (`sprint-change-proposal-2026-08-11-dedup.md`) at franco's explicit request, for reducing type/rank-duplicated routine bodies in the communication and I/O layers. A quick evidence check during proposal drafting corrected the original request's framing (I/O duplication is by array rank, not by real4/real8 type as initially assumed) and confirmed `assignpnt` is already consolidated via a generic interface and excluded from scope as this project's own documented "#1 GPU-porting risk." FR-58 is explicitly sequenced after FR-5/FR-33 (Epic 11) and FR-46 (Epic 12) to avoid three epics editing the same files concurrently.
+- `epics.md`'s epic order — a fifth Sprint Change Proposal on the same day (`sprint-change-proposal-2026-08-11-resequencing.md`) reordered `epics.md`'s epic sections into a recommended execution sequence at franco's explicit request (testing, containerization, CI, instrumentation, documentation, contribution guidelines, refactoring, GPU offloading, then remaining epics), extracted the former Story 6.6 into a new Epic 7, and left every epic/story/FR number unchanged, per this PRD's own "ID is the stable reference, not its position" convention (§0). This PRD's own FR/Feature numbering and content are unaffected — the reordering is confined to `epics.md` and `sprint-status.yaml`.

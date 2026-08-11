@@ -1,5 +1,5 @@
 # generated: 2026-07-06
-# last_updated: 2026-07-06
+# last_updated: 2026-08-11
 # project: RegCM
 # project_key: NOKEY
 # tracking_system: file-system
@@ -39,71 +39,111 @@
 # - Developer typically creates next story after previous one is 'done' to incorporate learnings
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; sprint-status surfaces open ones
+#
+# ORDERING NOTE (2026-08-11 resequencing): entries below are listed in recommended execution
+# order (see epics.md's Overview note), not epic-number order. Epic/story numbers are stable
+# identifiers and are unchanged by this reordering.
 
 generated: 2026-07-06
-last_updated: 2026-07-07
+last_updated: 2026-08-11
 project: RegCM
 project_key: NOKEY
 tracking_system: file-system
 story_location: /leonardo_scratch/fast/ICT26_MHPC_0/franco/RegCM/_bmad-output/implementation-artifacts
 
 development_status:
-  epic-1: in-progress
-  1-1-instrument-rrtmgs-compute-core: done
-  1-2-instrument-kpp-chemistry-integration: ready-for-dev
-  1-3-instrument-diagnostic-output-gather-and-write: backlog
-  1-4-baseline-profiling-run-and-published-report: backlog
-  1-5-long-running-memory-growth-investigation: backlog
-  1-6-valgrind-memory-leak-and-error-check: backlog
+  epic-1: backlog
+  1-1-verify-and-commit-the-regression-diff-tool: backlog
+  1-2-verify-multi-process-count-comparison: backlog
+  1-3-retire-the-legacy-regression-scripts: backlog
+  1-4-establish-trusted-baselines-for-testing-fixtures: backlog
   epic-1-retrospective: optional
 
   epic-2: backlog
-  2-1-verify-and-commit-the-regression-diff-tool: backlog
-  2-2-verify-multi-process-count-comparison: backlog
-  2-3-retire-the-legacy-regression-scripts: backlog
-  2-4-establish-trusted-baselines-for-testing-fixtures: backlog
+  2-1-adopt-pfunit-and-establish-a-unit-test-pattern: backlog
+  2-2-author-initial-unit-test-suite-for-representative-pure-routines: backlog
+  2-3-contributor-testing-documentation-unit-and-integration-workflows: backlog
   epic-2-retrospective: optional
 
   epic-3: backlog
-  3-1-evaluate-async-netcdf-as-a-complementary-i-o-optimization: backlog
-  3-2-extend-i-o-timing-instrumentation-to-restart-and-clm-land-model-history: backlog
-  3-3-parallel-netcdf-write-for-diagnostic-output-opt-in: backlog
-  3-4-i-o-profiling-and-optimization-investigation-across-all-paths: backlog
+  3-1-gnu-and-intel-oci-docker-build-images: backlog
+  3-2-apptainer-execution-on-leonardo: backlog
+  3-3-cuda-12-gpu-enabled-container-variant: backlog
+  3-4-github-actions-build-and-test-workflow: backlog
   epic-3-retrospective: optional
 
-  epic-4: backlog
-  4-1-correct-stale-precision-and-module-lifecycle-documentation: backlog
-  4-2-warn-users-about-namelist-pitfalls-and-the-clm3-5-deprecation: backlog
-  4-3-adopt-ford-for-auto-generated-api-documentation: backlog
+  epic-4: in-progress
+  4-1-instrument-rrtmgs-compute-core: done
+  4-2-instrument-kpp-chemistry-integration: ready-for-dev
+  4-3-instrument-diagnostic-output-gather-and-write: backlog
+  4-4-baseline-profiling-run-and-published-report: backlog
+  4-5-long-running-memory-growth-investigation: backlog
+  4-6-valgrind-memory-leak-and-error-check: backlog
   epic-4-retrospective: optional
 
+  # Elevated ahead of its literal "other epics" grouping: low-risk, and FR-20 unblocks epic-10
   epic-5: backlog
-  5-1-gnu-and-intel-oci-docker-build-images: backlog
-  5-2-apptainer-execution-on-leonardo: backlog
-  5-3-cuda-12-gpu-enabled-container-variant: backlog
-  5-4-github-actions-build-and-test-workflow: backlog
+  5-1-fail-fast-on-invalid-namelist-file-paths: backlog
+  5-2-correct-nvhpc-compiler-identity-detection: backlog
   epic-5-retrospective: optional
 
   epic-6: backlog
-  6-1-fail-fast-on-invalid-namelist-file-paths: backlog
-  6-2-correct-nvhpc-compiler-identity-detection: backlog
+  6-1-correct-stale-precision-and-module-lifecycle-documentation: backlog
+  6-2-warn-users-about-namelist-pitfalls-and-the-clm3-5-deprecation: backlog
+  6-3-adopt-ford-for-auto-generated-api-documentation: backlog
+  6-4-container-build-and-run-documentation-for-users-and-developers: backlog
+  6-5-document-and-streamline-the-tools-scripts-and-programs: backlog
+  6-6-unit-and-integration-tests-for-tools-scripts-and-programs: backlog  # relocated from 9-4 (2026-08-11)
   epic-6-retrospective: optional
 
+  # New epic, extracted from epic-6's former story 4-6 (2026-08-11 resequencing)
   epic-7: backlog
-  7-1-verify-and-document-the-full-existing-gpu-porting-footprint: backlog
-  7-2-verify-and-document-the-existing-gpu-direct-halo-exchange: backlog
-  7-3-continue-moloch-dynamical-core-gpu-porting: backlog
-  7-4-cross-vendor-do-concurrent-parallelization-verification: backlog
-  7-5-rrtmg-gpu-porting-feasibility-investigation-with-go-no-go-checkpoint: backlog
-  7-6-configurable-gpu-target-architecture: backlog
-  7-7-statistical-reproducibility-regression-test-for-gpu-ported-code: backlog
-  7-8-gpu-porting-and-performance-guidance-document: backlog
+  7-1-contribution-guide-issue-and-merge-request-rules: backlog
   epic-7-retrospective: optional
 
+  # Moved here on a second dependency-audit pass (2026-08-11): an earlier placement right after
+  # epic-5 put this ahead of epic-6/epic-7, which its stories depend on. All satisfied here.
   epic-8: backlog
-  8-1-oasis3-mct-field-exchange-documentation-and-regression-coverage: backlog
-  8-2-regesm-field-exchange-documentation-and-regression-coverage: backlog
-  8-3-clm-land-model-coupling-support-tier-clarification: backlog
-  8-4-cism-coupling-interface-design: backlog
-  8-5-resolve-bmi-status: backlog
+  8-1-memory-leak-and-memory-safety-regression-gate: backlog
+  8-2-performance-regression-gate-ci-smoke-tier-and-required-slurm-evidence: backlog
+  8-3-dependency-and-container-vulnerability-scanning: backlog
   epic-8-retrospective: optional
+
+  epic-9: backlog
+  9-1-audit-source-code-for-type-and-rank-duplicated-routines: backlog
+  9-2-consolidate-communication-layer-duplicated-routines: backlog
+  9-3-consolidate-i-o-layer-duplicated-routines: backlog  # blocked on epic-11 and epic-12
+  epic-9-retrospective: optional
+
+  epic-10: backlog
+  10-1-verify-and-document-the-full-existing-gpu-porting-footprint: backlog
+  10-2-verify-and-document-the-existing-gpu-direct-halo-exchange: backlog
+  10-3-continue-moloch-dynamical-core-gpu-porting: backlog
+  10-4-cross-vendor-do-concurrent-parallelization-verification: backlog
+  10-5-rrtmg-gpu-porting-feasibility-investigation-with-go-no-go-checkpoint: backlog
+  10-6-configurable-gpu-target-architecture: backlog
+  10-7-statistical-reproducibility-regression-test-for-gpu-ported-code: backlog
+  10-8-gpu-porting-and-performance-guidance-document: backlog
+  epic-10-retrospective: optional
+
+  epic-11: backlog
+  11-1-evaluate-async-netcdf-as-a-complementary-i-o-optimization: backlog
+  11-2-extend-i-o-timing-instrumentation-to-restart-and-clm-land-model-history: backlog
+  11-3-parallel-netcdf-write-for-diagnostic-output-opt-in: backlog
+  11-4-i-o-profiling-and-optimization-investigation-across-all-paths: backlog
+  epic-11-retrospective: optional
+
+  epic-12: backlog
+  12-1-evaluate-and-design-adios2-integration: backlog
+  12-2-implement-adios2-parallel-write-for-diagnostic-restart-and-clm-land-model-output-opt-in: backlog
+  12-3-adios2-i-o-backend-documentation: backlog
+  epic-12-retrospective: optional
+
+  # No dependency on any other epic; sequenced last by priority choice (confirmed with franco)
+  epic-13: backlog
+  13-1-oasis3-mct-field-exchange-documentation-and-regression-coverage: backlog
+  13-2-regesm-field-exchange-documentation-and-regression-coverage: backlog
+  13-3-clm-land-model-coupling-support-tier-clarification: backlog
+  13-4-cism-coupling-interface-design: backlog
+  13-5-resolve-bmi-status: backlog
+  epic-13-retrospective: optional

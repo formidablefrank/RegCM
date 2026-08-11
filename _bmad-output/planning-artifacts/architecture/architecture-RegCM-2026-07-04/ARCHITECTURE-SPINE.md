@@ -195,6 +195,8 @@ graph TD
 | GNU (gfortran) | latest verified-compatible (not hard-pinned, AD-15); GCC 16.1 (released 2026-04-30) verified current this session — no known incompatibility with the pinned I/O library versions |
 | Intel (ifx) | latest verified-compatible (not hard-pinned, AD-15); oneAPI 2026.0 / ifx 2026.0.0 verified current this session — covers RegCM5's F90/2003/2008 requirement; requires `FC=ifx F77=ifx CC=icx --disable-fortran-type-check` to build netCDF-Fortran 4.6.1/PnetCDF 1.12.3 cleanly (known `sizeof(off_t)` configure issue; PnetCDF's configure silently defaults to gfortran if `FC` isn't set explicitly) |
 | AMD/AOCC | where feasible, non-mandatory (AD-14) — no version pinned |
+| ADIOS2 | version to be pinned by Story 12.1's design, hard-pinned identically across native + all container variants once set (AD-23) |
+| pFUnit | pFUnit4 — unit-test framework (AD-24), version not yet pinned; established by Epic 2's Story 2.1 |
 
 ## Structural Seed
 
@@ -236,6 +238,11 @@ Slurm partitions:
 | 4.7 Automated Regression Infrastructure (FR-24-FR-27) | `Tools/Scripts/TestingAndBenchmarking/manage_baseline.py`, `regression_diff.py` | AD-4, AD-9, AD-10, AD-11, AD-12, AD-13, AD-16 |
 | 4.8 Containerization for Multi-System GPU Portability (FR-28-FR-30) | Docker/OCI build definitions, Apptainer `.sif` conversion | AD-14, AD-15, AD-18, AD-21 |
 | 4.9 GitHub CI/CD Automated Testing Pipeline (FR-31-FR-32) | `.github/workflows/` | AD-4, AD-16 |
+| 4.8 (extension) / 4.6 Contributor container onboarding (FR-40-FR-41) | Docker/OCI build definitions (Story 3.1/3.3), `Doc/` build/run documentation | AD-14, AD-15, AD-21 |
+| 4.11 Contributor Unit Testing Framework (FR-42-FR-44) | pFUnit build target; `Share/mod_capecin.F90`, `Share/mod_interp.F90`, `Share/mod_heatindex.F90` (unit-test subjects); `Doc/` testing documentation | AD-24 |
+| 4.12 ADIOS2 I/O Backend (FR-45-FR-47) | `Main/mpplib/mod_ncout.F90` (`do_adios2_hist`), `Main/mod_savefile.F90` (`do_adios2_rst`), CLM history module (`do_adios2_clm`), `configure.ac` (`--enable-adios2`) | AD-23, AD-1, AD-6, AD-17 |
+| 4.13 Continuous Quality Gates (FR-53-FR-55) | `.github/workflows/` (CI smoke tier, Valgrind/sanitizer builds, pip-audit, Trivy); `.github/PULL_REQUEST_TEMPLATE.md` (Slurm-evidence requirement, Epic 7's Story 7.1); Story 4.6's recorded Valgrind baseline | AD-25, AD-4, AD-8, AD-11 |
+| 4.14 Code Duplication Audit and Generic-Interface Consolidation (FR-56-FR-58) | `Main/mpplib/mod_mppparam.F90` (communication/distribution, 42 duplicate-named subroutines), `Main/mpplib/mod_ncout.F90`/`Share/mod_ncstream.F90` (I/O, rank-duplicated) | AD-26, AD-3, AD-1, AD-12, AD-13 |
 
 ### AD-20 — GPU-direct halo exchange is implemented, not hypothetical [ADOPTED]
 
@@ -254,6 +261,30 @@ Slurm partitions:
 - **Binds:** FR-9, FR-10, FR-11, any GPU-side production or profiling run on `boost_usr_prod`
 - **Prevents:** an unstated default forcing every GPU-side run to guess between `mem:managed`, `mem:unified`, or explicit management; a build-matrix testing requirement (AD-7) being mistaken for a runtime default
 - **Rule:** the default for an actual production or profiling run is explicit device memory allocation — `configure.ac`'s plain `--enable-openacc` (`USE_OPENACC=1`: `-acc=gpu -gpu=$PGI_GPU_ARCH,lineinfo -Minfo=accel`, no `mem:managed`/`mem:unified` flag), requiring explicit `!$acc data`/`copyin`/`copyout`/`create` clauses rather than CUDA managed or unified memory. Consistent with, not a departure from, the codebase's validated GPU-porting pattern: AD-20's halo-exchange routines and the `meanall_1D_real8`/`real4` reduction routines both already use explicit `!$acc data copy`/`copyin`/`copyout`/`create` regions, not automatic memory. Distinct from AD-7, which fixes `--enable-openacc-managed` and `--enable-openacc-stdpar` as required *build-matrix test* cells regardless of this runtime default. Does not affect AD-8's canonical baseline (Intel/GNU partition, no GPU).
+
+### AD-23 — ADIOS2 opt-in mechanism and version pinning [ADOPTED]
+
+- **Binds:** FR-45, FR-46
+- **Prevents:** ADIOS2 becoming a silent default; its version drifting unpinned relative to the rest of the I/O stack
+- **Rule:** ADIOS2 is gated by build-time `--enable-adios2` and three independent runtime switches — `do_adios2_hist`, `do_adios2_rst`, `do_adios2_clm` — one per output path, following AD-6's existing per-path pattern rather than a single unified switch. Default is unset/off for all three, preserving current behavior (NFR-3). The ADIOS2 library version is hard-pinned identically across native builds and all container variants, added to AD-15's table, with the same regression-evidence bar as any other stack version bump. Because ADIOS2 writes its own BP (Binary Pack) format, not classic NetCDF, any comparison against the existing NetCDF baseline must state explicitly how it was performed — native BP-aware compare, or BP-to-NetCDF conversion first (NFR-16) — an unstated or assumed-compatible comparison is not acceptable evidence.
+
+### AD-24 — Unit-test scope: pure routines only [ADOPTED]
+
+- **Binds:** FR-42, FR-43
+- **Prevents:** unit-test coverage being invented for stateful physics/dynamics/I/O routines that were never validated in isolation; the project's testing-boundary convention being silently reversed rather than deliberately narrowed
+- **Rule:** the project's governing context currently states there is no meaningful unit-vs-integration split, and that isolated unit tests should not be invented for physics/dynamics routines not validated against a real model run. Epic 2 narrows, not reverses, that rule: pFUnit-based unit tests apply only to pure, side-effect-free routines with no dependency on module-scope state populated by model initialization (e.g. `getcape_new`, `interp1d_r8`, `heatindex`). Stateful physics/dynamics/I/O code remains validated only by full-model integration runs (Epic 1). This is a testing-boundary policy change and requires regcm5-dev's explicit sign-off (Story 2.1), recorded in that story's acceptance record.
+
+### AD-25 — Two-tier performance regression gate [ADOPTED]
+
+- **Binds:** FR-54, extends AD-4/NFR-9
+- **Prevents:** GitHub-hosted CI timing being mistaken for authoritative performance evidence; conversely, the absence of any automatic check letting a gross performance regression merge unnoticed
+- **Rule:** AD-4 already establishes that a green GitHub Actions check is necessary but not sufficient for physics/dynamics/accelerator changes, requiring Slurm validation on `dcgp_usr_prod`/`boost_usr_prod` for final acceptance. This decision applies that same principle specifically to performance, as two explicit tiers rather than one ambiguous check: (1) a coarse, automatic CI smoke check timing `Testing/ideal.in` against a stored baseline with a generous tolerance band, catching only gross regressions and tolerant of shared-runner noise; (2) for a change touching a subsystem FR-4's baseline profiled as a hotspot, or touching dynamics/I/O/GPU code, a Slurm-based performance run against AD-8's canonical EUR12 baseline is required evidence attached to the pull request, checked by regcm5-dev at review (NFR-10) — not something GitHub Actions enforces automatically. Tier 1 alone is never sufficient evidence for a performance claim; a change outside tier 2's trigger scope states explicitly why the Slurm-evidence requirement is waived, rather than being blocked by default.
+
+### AD-26 — Generic-interface consolidation policy [ADOPTED]
+
+- **Binds:** FR-57, FR-58, extends AD-3
+- **Prevents:** duplicate-body consolidation introducing `class(*)`/`select type` runtime polymorphism into or near a `do concurrent`/OpenACC-offloaded code path; a discovered behavioral divergence between previously-duplicated bodies being silently "fixed" instead of flagged
+- **Rule:** consolidating hand-duplicated routine bodies (e.g. `mod_mppparam.F90`'s 42 real4/real8- and rank-duplicated subroutines) must use compile-time mechanisms only — generic interfaces (already this codebase's established idiom, e.g. `interface exchange_array` → `module procedure exchange_array_r8, exchange_array_r4`) for call-site unification, and preprocessor-generated bodies or F2018 assumed-rank (only where it doesn't compromise explicit-index MPI correctness) where a candidate's audit recommends reducing the underlying body count itself. Never runtime polymorphism, since AD-3's `do concurrent`/OpenACC device-kernel generation requires concrete, monomorphic types at every offloaded call site. If consolidation surfaces a behavioral divergence between the previously-duplicated bodies, it is flagged for regcm5-dev's review as a found bug (matching the boundary-condition guardrail pattern, NFR-12/AD-19, generalized), not silently resolved as part of the refactor. `assignpnt` (`Share/mod_memutil.F90`) already uses a generic interface and is out of scope for further consolidation, per its documented status as this project's own "#1 GPU-porting risk."
 
 ## Deferred
 
