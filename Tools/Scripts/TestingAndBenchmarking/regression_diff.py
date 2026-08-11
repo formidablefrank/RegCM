@@ -30,7 +30,7 @@
 # statistical bounds, FR-25/FR-37), in which case rMAD/rRMSE must fall
 # within that field's accepted percentage.
 #
-# Run via: uv run regression_diff.py compare --run-dir X --baseline-dir Y
+# Run via: uv run regression_diff.py --run-dir X --baseline-dir Y
 # (uv resolves netCDF4/numpy automatically from the header above).
 
 import argparse
