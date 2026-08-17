@@ -60,6 +60,8 @@ No CI pipeline (no `.github/workflows`), no linter/formatter config — style en
 - For running Slurm jobs with programs compiled with Intel, use `dcgp_usr_prod` partition, `dcgp_qos_dbg` QoS with account `ict26_mhpc`
 - For running Slurm jobs with programs compiled with NVHPC, use `boost_usr_prod` partition, `boost_qos_dbg` QoS with account `ict26_mhpc_0`
 - Let the user review the Slurm script first before submitting
+- Writing a Slurm script to **build** RegCM5? Copy the matching reference, don't start from scratch — Intel: `RegCM-data/benchmarking/parallel-io-initial/build_async_off_intel.sh`; NVHPC: `RegCM-data/benchmarking/parallel-io-initial/build_async_off_nvhpc.sh`; GNU: `bin/slurm-1-2-build-gnu-debug.sh`. Each pins a bisected known-good compiler version and spack toolchain prefix.
+- Writing a Slurm script to **run** RegCM5, any of the three compilers? Copy `RegCM-data/benchmarking/parallel-io-initial/submit_sweep.sh` — it encodes QOS/partition/account choices and MPI-IO environment variables found only through failed submissions and crashed jobs.
 
 **Communication style:**
 - Write in a register consistent with scholarly books and peer-reviewed journal articles

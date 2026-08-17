@@ -39,4 +39,4 @@ RegCM5 has no working automated regression-diff tool today: the legacy `testing.
 - Story 1.2 depends on Story 1.1: multi-process-count verification runs against the tool only after it is verified and committed.
 - Story 1.3 depends on Stories 1.1–1.2: the legacy scripts are archived only once `regression_diff.py` is confirmed to supersede them.
 - Story 1.4 depends on the tool existing: it uses `manage_baseline.py promote` to populate the first trusted baseline.
-- This epic is a prerequisite for every later epic's Numerical/Test acceptance criteria: containerized CI (Epic 3) invokes this tool, and GPU statistical-reproducibility testing and coupling regression coverage (Epic 4 and beyond) build directly on the tolerance mechanism and baseline established here.
+- This epic is a prerequisite for every later epic's Numerical/Test acceptance criteria: containerized CI (Epic 3) invokes this tool, GPU statistical-reproducibility testing (Epic 10) builds directly on the tolerance mechanism, and coupling regression coverage (Epic 13) builds on the baseline established here.

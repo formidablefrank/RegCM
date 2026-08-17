@@ -40,6 +40,7 @@ baseline_commit: 'd64e912e93d34c6565df4145ce2265bc13c74dbc'
 - `Tools/Scripts/TestingAndBenchmarking/regression_diff.py:284-303` -- `main()`: flat `argparse` parser, no `add_subparsers()`; `--run-dir`/`--baseline-dir` required top-level flags, `--nprocs`/`--tolerance-file`/`--only-fields`/`--json`/`--report-file` optional; calls `cmd_compare(args)` directly
 - `Tools/Scripts/TestingAndBenchmarking/regression_diff.py:44-48` -- `DEFAULT_GPU_TOLERANCES`: `tas`/`ps` rMAD/rRMSE ≤0.1%, `huss` ≤5.0%
 - `Tools/Scripts/TestingAndBenchmarking/regression_diff.py:62-69` -- `load_tolerances()`: `--tolerance-file` fully replaces the default table (not a merge) via `json.load`
+- `Tools/Scripts/TestingAndBenchmarking/regression_diff.py:101-120` -- `judge()`: implements the tolerance-override AC directly -- looks up each field's tolerance (or bit-exact default) from the loaded table and decides pass/fail per field; this is the function the tolerance-override task actually verifies
 - `Tools/Scripts/TestingAndBenchmarking/regression_diff.py:50-59,281` -- exit code scheme: 0 pass, 1 regression (`cmd_compare`'s final `sys.exit`), 2 usage error (`EXIT_USAGE_ERROR`, `die_usage()`)
 - `Testing/test_001.in` -- existing fixture (confirmed present, 1888 bytes) to run twice for the bit-exact verification
 - `Tools/Scripts/TestingAndBenchmarking/manage_baseline.py` -- already tracked alongside `regression_diff.py` in the same commit; no changes needed here, confirms the "committed" half of this story's AC is already satisfied
@@ -49,16 +50,31 @@ baseline_commit: 'd64e912e93d34c6565df4145ce2265bc13c74dbc'
 
 **Execution:**
 - [x] `Tools/Scripts/TestingAndBenchmarking/regression_diff.py:33` -- correct the stale docstring to the real flat-flag invocation (no `compare` token) -- prevents a future contributor from copy-pasting a command that fails
-- [x] Slurm job: run `Testing/test_001.in` twice (identical config, same compiler/build), then `regression_diff.py --run-dir RUN1 --baseline-dir RUN2` -- confirms bit-exact reporting and exit 0 against real output, not just code inspection
-- [x] Construct a `--tolerance-file` JSON narrowing one field's tolerance, rerun the comparison -- confirms the override-honored-per-field / rest-default-to-bit-exact behavior actually works at runtime
+- [x] Slurm job: run `Testing/test_001.in` twice (identical config, same compiler/build), then `regression_diff.py --run-dir RUN1 --baseline-dir RUN2` -- confirms bit-exact reporting and exit 0 against real output, not just code inspection -- **see Verification/Caveat: 3 of 4 streams passed vacuously (zero records), only ATM is a genuine comparison**
+- [x] Construct a `--tolerance-file` JSON narrowing one field's tolerance, rerun the comparison -- confirms the override-honored-per-field / rest-default-to-bit-exact behavior actually works at runtime -- **see Verification/Caveat: same vacuous-stream caveat applies to most of the "148 of 149 fields" figure**
 - [x] Pass a deliberately malformed `--tolerance-file` -- confirms the `die_usage()`/exit-2 path fires as documented
 - [x] Record Build/Test/Numerical/Performance evidence in the commit/PR description per project convention
 
 **Acceptance Criteria:**
-- Given `regression_diff.py` run against two identical runs of `test_001.in`, when invoked via `--run-dir`/`--baseline-dir`, then it reports bit-exact agreement across all shared NetCDF fields and exits 0
-- Given a `--tolerance-file` narrowing a subset of fields, when passed to the tool, then the override is honored per-field and every field not named in it defaults to bit-exact
+- Given `regression_diff.py` run against two identical runs of `test_001.in`, when invoked via `--run-dir`/`--baseline-dir`, then it reports bit-exact agreement across all shared NetCDF fields and exits 0 (see Verification/Caveat: genuinely demonstrated for the ATM stream; RAD/SRF/STS passed vacuously, zero records)
+- Given a `--tolerance-file` narrowing a subset of fields, when passed to the tool, then the override is honored per-field and every field not named in it defaults to bit-exact (see Verification/Caveat: same vacuous-stream qualifier applies)
 - Given the stale `compare`-subcommand docstring line, when this story completes, then it matches the tool's real flat-flag invocation
 - Given both scripts are already committed (`238393c72`), when this story completes, then no further commit action is needed — this half of the original AC is already satisfied going in
+
+### Review Findings
+
+**`/bmad-code-review` pass (2026-08-11), reviewing the full branch diff (`61c8aa4ee`, `b475cb42a`, `8af0e7d8f`):**
+
+- [x] [Review][Patch] `epic-1-context.md`'s Cross-Story Dependencies section misattributes "GPU statistical-reproducibility testing and coupling regression coverage" to "Epic 4 and beyond" — per `epics.md`, GPU statistical-reproducibility is Story 10.7 (Epic 10) and coupling regression coverage is Epic 13, not Epic 4 (which is instrumentation/profiling only, no GPU or coupling content). [_bmad-output/implementation-artifacts/epic-1-context.md:42] — **Fixed:** now cites Epic 10 and Epic 13 by name.
+- [x] [Review][Patch] Spec's Code Map never lists `judge()` (`regression_diff.py:101-120`), the function that actually implements the tolerance-honored-per-field acceptance criterion the Tasks section verifies. [_bmad-output/implementation-artifacts/spec-1-1-verify-and-commit-the-regression-diff-tool.md:43] — **Fixed:** added a Code Map line for `judge()`.
+- [x] [Review][Patch] `deferred-work.md`'s new heading ("Deferred from: verification of 1-1-...") breaks the file's established "Deferred from: code review of `<story>`" convention used by every other section, hurting grep-ability. [_bmad-output/implementation-artifacts/deferred-work.md:3] — **Fixed:** renamed to "Deferred from: code review of 1-1-verify-and-commit-the-regression-diff-tool", and this review's own new defer items were folded into the same section rather than creating a second, confusingly-similar heading.
+- [x] [Review][Patch] Suggested Review Order's "vacuous bit-exact on zero-record streams" stop points only at `deferred-work.md:6`, skipping the adjacent, also-new item 3 (the docstring-isn't-a-real-docstring finding) at `deferred-work.md:7` — a reviewer following the order top-to-bottom is never directed to it. [_bmad-output/implementation-artifacts/spec-1-1-verify-and-commit-the-regression-diff-tool.md:97] — **Fixed:** stop now covers both lines.
+- [x] [Review][Patch] Deferred item 1 (`mod_lm_interface.F90:930`) recommends prioritizing a fix but names no owner or tracking hook, and doesn't connect the risk forward to Story 1.2 — the next story queued to run real Slurm/DEBUG-build verification and the one most likely to hit this exact crash next. [_bmad-output/implementation-artifacts/deferred-work.md:5] — **Fixed:** added an explicit Story 1.2 forward-pointer to that entry.
+- [x] [Review][Patch] The Tasks/Acceptance checklist and AC bullets for the bit-exact and tolerance-override scenarios are checked off with no inline pointer to the Verification section's Caveat — a reader skimming only the checklist would not know 3 of 4 streams passed vacuously (zero records, nothing actually compared) rather than via a genuine comparison. [_bmad-output/implementation-artifacts/spec-1-1-verify-and-commit-the-regression-diff-tool.md:58] — **Fixed:** added inline pointers to all 4 checklist/AC lines.
+- [x] [Review][Defer] `epics.md`'s own Story 1.1 acceptance-criteria text still reads "Given both scripts are currently untracked... Then... committed" — the exact premise this story found stale, corrected only in the derived spec and `epic-1-context.md`, not at the planning-artifact source; a future `epic-1-context.md` regeneration risks silently reintroducing it. [_bmad-output/planning-artifacts/epics.md] — deferred, pre-existing (planning-artifact correction is outside an implementation story's normal scope)
+- [x] [Review][Defer] `regression_diff.py`'s other documented error paths — `shape-mismatch`, `missing-in-candidate`, `missing-in-baseline` (`regression_diff.py:159-162,79-80`), and the "file fails to open" `unreadable` path (`regression_diff.py:50-53`) — were never runtime-exercised by this story's verification, only the three scenarios in the approved I/O Matrix. [Tools/Scripts/TestingAndBenchmarking/regression_diff.py] — deferred, pre-existing tool surface, good candidate for Story 1.2's own verification pass
+- [x] [Review][Defer] The GPU tolerance policy's "7-model-day run" validity precondition (`epic-1-context.md:19`) is asserted as policy but never checked, recorded, or referenced anywhere `regression_diff.py` actually runs — the tool judges purely field-by-field with no run-duration awareness. [_bmad-output/implementation-artifacts/epic-1-context.md:19] — deferred, pre-existing policy/tooling gap
+- [x] [Review][Defer] A non-DEBUG (production) build was never tried as a way to sidestep the DEBUG-only `mod_lm_interface.F90:930` crash and obtain genuine (non-vacuous) evidence across all 4 output streams instead of just ATM. [_bmad-output/implementation-artifacts/spec-1-1-verify-and-commit-the-regression-diff-tool.md:77] — deferred, cheap follow-up worth trying before/alongside a real fix to the crash itself
 
 ## Spec Change Log
 
@@ -88,13 +104,13 @@ baseline_commit: 'd64e912e93d34c6565df4145ce2265bc13c74dbc'
 **Verification evidence & tracking**
 
 - Runtime verification outcome, the crash caveat, and reproducibility paths — the actual substance of this story.
-  [`spec-1-1-verify-and-commit-the-regression-diff-tool.md:77`](spec-1-1-verify-and-commit-the-regression-diff-tool.md#L77)
+  [`spec-1-1-verify-and-commit-the-regression-diff-tool.md:93`](spec-1-1-verify-and-commit-the-regression-diff-tool.md#L93)
 
-- The pre-existing crash that blocked full-stream verification, now recurring for a second story.
+- The pre-existing crash that blocked full-stream verification, now recurring for a second story (see the added Story 1.2 forward-pointer).
   [`deferred-work.md:5`](deferred-work.md#L5)
 
-- A real tool-hardening gap this story's own evidence surfaced: vacuous bit-exact on zero-record streams.
-  [`deferred-work.md:6`](deferred-work.md#L6)
+- Two real tool-hardening gaps this story's own evidence surfaced: vacuous bit-exact on zero-record streams, and the usage comment that still isn't a real docstring.
+  [`deferred-work.md:6-7`](deferred-work.md#L6-L7)
 
 - Sprint tracker lift: `epic-1` moves to `in-progress`, this story moves to `review`.
   [`sprint-status.yaml:55`](sprint-status.yaml#L55)
