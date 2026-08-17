@@ -96,7 +96,7 @@ baseline_commit: 'd64e912e93d34c6565df4145ce2265bc13c74dbc'
 - A real tool-hardening gap this story's own evidence surfaced: vacuous bit-exact on zero-record streams.
   [`deferred-work.md:6`](deferred-work.md#L6)
 
-- Sprint tracker lift: `epic-1` and this story move from `backlog` to `in-progress`.
+- Sprint tracker lift: `epic-1` moves to `in-progress`, this story moves to `review`.
   [`sprint-status.yaml:55`](sprint-status.yaml#L55)
 
 - Epic context corrected to match reality: both tools were already committed before this epic began.
