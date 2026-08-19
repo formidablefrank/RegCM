@@ -201,6 +201,11 @@ No CI pipeline (no `.github/workflows`), no linter/formatter config — style en
 
 **No time estimates** — don't frame acceptance criteria or story scope in terms of duration.
 
+**Branching rules**
+- Create a new branch from `develop` when developing  a new story
+- After developing the story, do not stage all changes on a single commit. All changes related to BMAD artifacts should be staged on a seperate commit and all changes related to the software model should be staged on another separate commit.
+- After marking the story done, checkout the branch `develop` then merge the newly created branch.
+
 ### Critical Don't-Miss Rules
 
 **Anti-patterns (cross-referenced):**
