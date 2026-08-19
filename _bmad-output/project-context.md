@@ -129,7 +129,7 @@ No CI pipeline (no `.github/workflows`), no linter/formatter config — style en
 
 **Test Organization:**
 - No unit test framework at the model level (the one `pFUnit`-style unittest dir found is inside bundled third-party CLM3.5 code, not RegCM's own) — testing is full-model **integration runs**, driven by namelists
-- `Testing/` holds the fixture namelists: `test_001`–`016.in` (small regional domains), `ideal.in`/`ideal_profile.in` (idealized cases), `isc24.in`/`isc24_small.in`/`isc24_profile.in` (profiling/benchmark cases), plus `Testing/CORDEX/*.namelist` (production-scale CORDEX domain configs) and required input data (`RRTM_DATA/`, `CHEM_DATA/`)
+- `Testing/` holds the fixture namelists: `test_001`–`016.in` (small regional domains), `ideal.in`/`ideal_profile.in` (idealized cases), `isc24.in`/`isc24_small.in`/`isc24_profile.in` (profiling/benchmark cases), `EUR12_namelist.in` (AD-8's canonical `$FAST` baseline fixture — a version-controlled reference copy of the domain/physics parameters, not a runnable copy: paths are `/set/this/to/where/...` placeholders), plus `Testing/CORDEX/*.namelist` (production-scale CORDEX domain configs, distinct from `EUR12_namelist.in`'s grid) and required input data (`RRTM_DATA/`, `CHEM_DATA/`)
 
 **⚠️ There is no working automated regression-diff tool in this repo today:**
 - `Tools/Scripts/archive/testing.py` (archived from `Tools/Scripts/BuildBot/` in Story 1.3) is written in Python 2 (`print "..."` without parentheses) — it will not run as-is under any interpreter on a modern cluster; treat it as decorative, not a command you can invoke
