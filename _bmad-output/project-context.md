@@ -204,7 +204,7 @@ No CI pipeline (no `.github/workflows`), no linter/formatter config — style en
 
 **Branching rules**
 - Create a new feature branch from `develop` when developing a new story
-- After developing the story, do not stage all changes on a single commit. All changes related to BMAD artifacts should be staged on a separate commit, all changes related to CI/CD should be staged on a separate commit, all changes related to contributor guidelines and documentation should be staged on a separate commit and all others related to the source code should be staged on another separate commit.
+- After developing the story, do not stage all changes on a single commit. All changes related to BMAD artifacts should be staged on a separate commit, all changes related to testing and CI/CD should be staged on a separate commit, all changes related to contributor guidelines and documentation should be staged on a separate commit and all others related to the source code should be staged on another separate commit.
 - After marking the story done, checkout the branch `develop` then merge the newly created branch into it, without deleting the feature branch.
 
 ### Critical Don't-Miss Rules
