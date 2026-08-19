@@ -1,14 +1,22 @@
 ! AD-8 canonical baseline fixture (Story 1.4). 275x275x36 EURR-12 domain,
 ! ROTLLR projection, MOLOCH core (idynamic=3). The &clm_inparm groups below
 ! take effect only under a CLM4.5/ECLM build (-DCLM45/-DCLM); a non-CLM
-! build silently falls back to BATS instead. Run at 2 nodes/nproc=196 on
-! dcgp_usr_prod for the promoted $FAST baseline.
+! build silently falls back to BATS instead.
 !
 ! This is a version-controlled reference copy of the domain/physics
 ! parameters (AD-8), not the canonical copy itself -- see
 ! franco/RegCM-data/EURR12/EUR12_namelist.in. Unrelated to
 ! Testing/CORDEX/EUR-12_RegCM5_ERA5.namelist, a different, larger grid
 ! (415x427x30).
+!
+! Note (epic-1 retrospective, 2026-08-19): this file mirrors the canonical
+! copy's full 7-day window (gdate1/gdate2 below). The $FAST baseline
+! currently promoted at nproc=196 on dcgp_usr_prod is NOT a run of this
+! full window -- it is a 1-day (24h) probe (gdate2/mdate2 = 2009090200)
+! truncated to fit dcgp_qos_dbg's 30-minute wall-time cap (see Story 1.2's
+! Design Notes). Running this file as-is will not reproduce that baseline;
+! it documents the intended full-window config, not the probe that was
+! actually promoted.
 &dimparam
     iy = 275
     jx = 275
