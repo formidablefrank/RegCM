@@ -139,13 +139,26 @@ Claude Sonnet 5 (bmad-build implementation dispatch; continued directly via bmad
 
 | AC | Mechanism | Verification | Result |
 | --- | --- | --- | --- |
-| #1, CBMZ compile | both | GNU/Intel/NVHPC, DEBUG + non-DEBUG | Build-verified — compile only, not a runtime check (Slurm build matrix, jobs in Task 3; see reapplication note below for why this evidence needs re-confirming) |
+| #1, CBMZ compile | both | GNU/Intel/NVHPC, DEBUG + non-DEBUG | Build-verified — compile only, not a runtime check. Confirmed twice: original Task 3 matrix (2026-08-11, commit `2c7968d1b`) and a fresh matrix on the current tree (2026-08-19, commit `edf7ea926`; see reapplication note below) |
 | #1, CBMZ runtime (`cbmz_integrate` timer entry) | code-inspection | pattern matches verified `cb6_integrate`/RRTMG instrumentation | Not runtime-verified — blocked by 6 unrelated pre-existing bugs/constraints (Task 4); accepted per franco's direction |
 | #1, CB6r2 compile | code-inspection only | standalone `gfortran -c` attempts all failed on missing prerequisite `.mod` files | Not compile-verified; `GAS_CB6r2` is unwired from the build regardless (pre-existing, out of scope) |
 | #1, CB6r2 runtime | code-inspection only | pattern matches verified CBMZ instrumentation | Not runtime-verified — `GAS_CB6r2` unreachable from any build |
 | #2 (zero overhead, non-DEBUG) | structural | `#ifdef DEBUG` guard confirmed absent from default-build preprocessor output, both files, all three vendors | Verified on the pre-reapplication build (Task 3 evidence); structural argument holds regardless of reapplication since the guard itself is unchanged. Also see the adjacent, still-open `maxnsubs` registry risk in `deferred-work.md` (2 more `time_begin` sites added, cap unchecked) |
 
-Code reapplication note (2026-08-19): the instrumentation described throughout this file (Tasks 1-3) was implemented and committed on the `instrumentation/kpp-chem` branch (`2c7968d1b`), which was never merged and fell far behind `develop` (predating Epic 1 stories 1-1 through 1-4, the epic renumbering, and the EUR12 baseline work). The two-file code diff was reapplied byte-for-byte on a fresh branch cut from current `develop` (`instrumentation/kpp-chem-4-2`, commit `edf7ea926`) so the code matches what this story documents; no other content from the stale branch was carried over. **This reapplied commit has not itself been rebuilt or re-verified on the current tree** — the Build-verified rows in the table above cite evidence from the original 2026-08-11 Slurm run against commit `2c7968d1b`, not the current commit. A check of everything that evidence depends on (`mod_service.F90`, `mod_intkinds`, `GAS_CBMZ_NEW/`, `Main/chemlib/Makefile.am`, `configure.ac`) shows no changes between `2c7968d1b` and current `HEAD` other than the reapplication itself, so a compile break is unlikely — but "unlikely" is not verified evidence, and a fresh compile check should run before this story is marked done.
+Code reapplication note (2026-08-19): the instrumentation described throughout this file (Tasks 1-3) was implemented and committed on the `instrumentation/kpp-chem` branch (`2c7968d1b`), which was never merged and fell far behind `develop` (predating Epic 1 stories 1-1 through 1-4, the epic renumbering, and the EUR12 baseline work). The two-file code diff was reapplied byte-for-byte on a fresh branch cut from current `develop` (`instrumentation/kpp-chem-4-2`, commit `edf7ea926`) so the code matches what this story documents; no other content from the stale branch was carried over.
+
+**Fresh build verification (2026-08-19), franco's direction: full cross-vendor matrix.** The reapplied commit was not itself rebuilt or re-verified when first reapplied — the original Build-verified evidence cited only the 2026-08-11 Slurm run against commit `2c7968d1b`, not the reapplication. Closed by re-running the full GNU/Intel/NVHPC × DEBUG/production matrix (the same reduced scope as the original Task 3: `external`/`Share`/`Main/mpplib`/`Main/chemlib` only, using the same six pre-existing, unmodified scripts from the original run — `bin/slurm-1-2-build-{gnu,intel,nvhpc}-{debug,production}.sh`) against current `develop`-based `HEAD` (commit `edf7ea926`). All six legs `RESULT: PASS`; DEBUG builds show `-DDEBUG` compiled in (91 occurrences in each build log), production builds show it absent (0 occurrences in each), matching the original Task 3 pattern exactly:
+
+| Vendor | Config | Job | Result | `-DDEBUG` in log |
+| --- | --- | --- | --- | --- |
+| GNU | debug | 53019755 | PASS | 91 |
+| GNU | production | 53020167 | PASS | 0 |
+| Intel | debug | 53020615 | PASS | 91 |
+| Intel | production | 53021257 | PASS | 0 |
+| NVHPC | debug | 53024087 | PASS | 91 |
+| NVHPC | production | 53025612 | PASS | 0 |
+
+Logs: `RegCM-data/build-logs/1-2-<vendor>-<config>-<jobid>.out`/`.err`. This confirms the code as it now stands on `develop` (once merged) actually builds under all three required vendors, closing the verification-gap review finding. CB6r2's build status is unchanged by this check — `GAS_CB6r2` remains unwired from the build (pre-existing, out of scope), consistent with the rest of this story.
 
 ### File List
 
