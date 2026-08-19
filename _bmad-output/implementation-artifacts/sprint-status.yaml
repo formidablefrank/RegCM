@@ -45,11 +45,12 @@
 # identifiers and are unchanged by this reordering.
 
 generated: 2026-07-06
-last_updated: 2026-08-19
+last_updated: 08-19-2026 22:28
 project: RegCM
 project_key: NOKEY
 tracking_system: file-system
-story_location: /leonardo_scratch/fast/ICT26_MHPC_0/franco/RegCM/_bmad-output/implementation-artifacts
+story_location: 
+  /leonardo_scratch/fast/ICT26_MHPC_0/franco/RegCM/_bmad-output/implementation-artifacts
 
 development_status:
   epic-1: done
@@ -57,7 +58,7 @@ development_status:
   1-2-verify-multi-process-count-comparison: done
   1-3-retire-the-legacy-regression-scripts: done
   1-4-establish-trusted-baselines-for-testing-fixtures: done
-  epic-1-retrospective: optional
+  epic-1-retrospective: done
 
   epic-2: backlog
   2-1-adopt-pfunit-and-establish-a-unit-test-pattern: backlog
@@ -105,7 +106,8 @@ development_status:
   # epic-5 put this ahead of epic-6/epic-7, which its stories depend on. All satisfied here.
   epic-8: backlog
   8-1-memory-leak-and-memory-safety-regression-gate: backlog
-  8-2-performance-regression-gate-ci-smoke-tier-and-required-slurm-evidence: backlog
+  8-2-performance-regression-gate-ci-smoke-tier-and-required-slurm-evidence: 
+    backlog
   8-3-dependency-and-container-vulnerability-scanning: backlog
   epic-8-retrospective: optional
 
@@ -120,7 +122,8 @@ development_status:
   10-2-verify-and-document-the-existing-gpu-direct-halo-exchange: backlog
   10-3-continue-moloch-dynamical-core-gpu-porting: backlog
   10-4-cross-vendor-do-concurrent-parallelization-verification: backlog
-  10-5-rrtmg-gpu-porting-feasibility-investigation-with-go-no-go-checkpoint: backlog
+  10-5-rrtmg-gpu-porting-feasibility-investigation-with-go-no-go-checkpoint: 
+    backlog
   10-6-configurable-gpu-target-architecture: backlog
   10-7-statistical-reproducibility-regression-test-for-gpu-ported-code: backlog
   10-8-gpu-porting-and-performance-guidance-document: backlog
@@ -128,14 +131,16 @@ development_status:
 
   epic-11: backlog
   11-1-evaluate-async-netcdf-as-a-complementary-i-o-optimization: backlog
-  11-2-extend-i-o-timing-instrumentation-to-restart-and-clm-land-model-history: backlog
+  11-2-extend-i-o-timing-instrumentation-to-restart-and-clm-land-model-history: 
+    backlog
   11-3-parallel-netcdf-write-for-diagnostic-output-opt-in: backlog
   11-4-i-o-profiling-and-optimization-investigation-across-all-paths: backlog
   epic-11-retrospective: optional
 
   epic-12: backlog
   12-1-evaluate-and-design-adios2-integration: backlog
-  12-2-implement-adios2-parallel-write-for-diagnostic-restart-and-clm-land-model-output-opt-in: backlog
+  12-2-implement-adios2-parallel-write-for-diagnostic-restart-and-clm-land-model-output-opt-in: 
+    backlog
   12-3-adios2-i-o-backend-documentation: backlog
   epic-12-retrospective: optional
 
@@ -147,3 +152,52 @@ development_status:
   13-4-cism-coupling-interface-design: backlog
   13-5-resolve-bmi-status: backlog
   epic-13-retrospective: optional
+action_items:
+  - id: "epic-1-retro-item-1-fix-testing-eur12_namelist-in-date-windo"
+    epic: 1
+    action: "Fix Testing/EUR12_namelist.in date window (gdate2/mdate2) to match the
+      namelist that actually produced the promoted $FAST baseline, or re-run/re-promote
+      a true 7-day canonical baseline — human call on which is intended."
+    owner: "next Epic 1/11 follow-up session"
+    status: done
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-08-19.md"
+  - id: "epic-1-retro-item-2-correct-project-context-md-testing-rules"
+    epic: 1
+    action: "Correct project-context.md Testing Rules stale banner (\"no working automated
+      regression-diff tool\") to reflect Epic 1's delivered state."
+    owner: "next session, trivial fix"
+    status: done
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-08-19.md"
+  - id: "epic-1-retro-item-3-harden-manage_baseline-py-provenance-and"
+    epic: 1
+    action: "Harden manage_baseline.py provenance and keying: record the commit that
+      built the promoted binary (not just HEAD at promote time), add a fixture/domain
+      identifier to baseline directory keying, record build-flavor/configure flags
+      in the manifest."
+    owner: "whoever next promotes a second fixture (Epic 3 CI or Epic 10 GPU work)"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-08-19.md"
+  - id: "epic-1-retro-item-4-close-the-rad-srf-sts-ad-12-verification"
+    epic: 1
+    action: "Close the RAD/SRF/STS AD-12 verification gap at nproc=1/4: try the non-DEBUG-build
+      workaround, find a low-nproc-feasible fixture avoiding the mod_lm_interface.F90:930
+      crash, or add a zero-record guard to regression_diff.py."
+    owner: "whoever next relies on regression_diff.py for a stencil/halo-touching
+      change at low nproc"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-08-19.md"
+  - id: "epic-1-retro-item-5-decide-review-depth-once-for-the-epic-bu"
+    epic: 1
+    action: "Decide review depth once for the epic (Build built-in review only, vs.
+      added bmad-code-review pass, vs. hpc-test-trace-and-gate verdict before done)
+      rather than improvising per story."
+    owner: "project convention decision"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-08-19.md"
+  - id: "epic-1-retro-item-6-reinforce-the-build-test-numerical-perfo"
+    epic: 1
+    action: "Reinforce the Build:/Test:/Numerical:/Performance: commit-message convention
+      consistently across every story's commits."
+    owner: "process reminder"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-08-19.md"
