@@ -52,6 +52,7 @@ No CI pipeline (no `.github/workflows`), no linter/formatter config — style en
 ### Agent Operating Constraints
 
 **HPC cluster environment (CINECA Leonardo):**
+- VS Code's `code` CLI isn't available here in the login node
 - When running Python scripts, load the Python module first using `module load python/3.11.7`
 - Consult the `$HPCDOCS` directory before searching the web for cluster-specific questions (modules, compilers, paths, policy)
 - Work occurs on a shared login node, subject to resource sharing and fair use policy; enforced limits prevent any single user from consuming the whole node
