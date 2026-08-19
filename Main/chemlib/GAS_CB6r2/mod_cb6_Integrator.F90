@@ -46,6 +46,10 @@ MODULE mod_cb6_Integrator
   USE mod_cb6_JacobianSP, ONLY: LU_DIAG
   USE mod_cb6_LinearAlgebra, ONLY: KppDecomp, KppSolve, &
                Set2zero, WLAMCH
+  USE mod_intkinds, ONLY : ik4
+#ifdef DEBUG
+  USE mod_service, ONLY : time_begin, time_end, dbgslen
+#endif
 
   IMPLICIT NONE
   PUBLIC
@@ -94,6 +98,11 @@ SUBROUTINE INTEGRATE( TIN, TOUT, &
    REAL(kind=dp) :: RCNTRL(20), RSTATUS(20)
    INTEGER       :: ICNTRL(20), ISTATUS(20), IERR
 !!$   INTEGER, SAVE :: Ntotal = 0
+#ifdef DEBUG
+   CHARACTER(len=dbgslen) :: subroutine_name = 'cb6_integrate'
+   INTEGER(ik4) :: indx = 0
+   CALL time_begin(subroutine_name,indx)
+#endif
 
    ICNTRL(:)  = 0
    RCNTRL(:)  = 0.0_dp
@@ -141,6 +150,9 @@ SUBROUTINE INTEGRATE( TIN, TOUT, &
        IERR_U = IERR
      ENDIF
    ENDIF
+#ifdef DEBUG
+   CALL time_end(subroutine_name,indx)
+#endif
 
    END SUBROUTINE INTEGRATE
 
