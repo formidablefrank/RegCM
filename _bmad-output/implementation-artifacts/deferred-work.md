@@ -35,8 +35,12 @@
   evidence: `Main/mod_lm_interface.F90:930`, reached via `mod_tendency.F90`'s `physical_parametr`/`tend`. Not investigated past the crash message by this story; this is the bug franco chose to stop pursuing further rather than keep pushing through, given it already blocked two other stories (1.1, 1.2-verify-multi-process-count-comparison) independently.
 
 - source_spec: `_bmad-output/implementation-artifacts/1-2-instrument-kpp-chemistry-integration.md`
-  summary: `aeroppt`'s `RH` array read uses subscript 19 against a declared upper bound of 18 (`forrtl: severe (408)`), triggered whenever `ichem==1`, independent of `iclimaaer`. Diagnosed but not fixed — a fix was described in an earlier draft of this story's Completion Notes as landed and verified, which was incorrect; no such change exists in the tree.
+  summary: `aeroppt`'s `RH` array read uses subscript 19 against a declared upper bound of 18 (`forrtl: severe (408)`), triggered whenever `ichem==1`, independent of `iclimaaer`. Diagnosed but not fixed.
   evidence: `Main/radlib/mod_rad_aerosol.F90:2511`. `aeroppt`'s `rh(n,k)` reads are unconditional, but `rt%rh` (allocated shape `(kz,npr)` in `Main/radlib/mod_rad_colmod3.F90:116`) is only correctly indexed as `rh(k,n)`. The neighboring `pint`/`path` computation already has an `irrtm`-branched transpose fix for this exact pattern (`mod_rad_aerosol.F90` around line 2455); `rh` never received the equivalent treatment. Still open.
+
+- source_spec: `_bmad-output/implementation-artifacts/1-2-instrument-kpp-chemistry-integration.md`
+  summary: A Review Findings entry in the story file (the `CALL time_begin`/`CALL time_end` case-style fix) still claims it was "re-verified by the same `-DDEBUG` compile above," but the very next entry in the same document established that cited compile job actually failed. The correction pass fixed the "Resolved" claim, the Debug Log References entry, and Task 3's note, but didn't loop back to fix this one.
+  evidence: `_bmad-output/implementation-artifacts/1-2-instrument-kpp-chemistry-integration.md:128` (the "Fixed" claim) vs. line 133 (the correction establishing job 51817947 failed with `COMPILE mod_cb6_Integrator EXIT=1`). The case-style fix itself is plausibly still correct on visual inspection (it's a mechanical `call`→`CALL` change matching the surrounding file's convention); only the "re-verified" claim is stale. Surfaced incidentally during story 4-2's third review pass — pre-existing, not caused by that pass's own changes.
 
 ## Deferred from: code review of 4-1-instrument-rrtmgs-compute-core (2026-07-07)
 
