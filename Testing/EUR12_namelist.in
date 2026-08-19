@@ -1,0 +1,138 @@
+! AD-8 canonical baseline fixture (Story 1.4). 275x275x36 EURR-12 domain,
+! ROTLLR projection, MOLOCH core (idynamic=3). The &clm_inparm groups below
+! take effect only under a CLM4.5/ECLM build (-DCLM45/-DCLM); a non-CLM
+! build silently falls back to BATS instead. Run at 2 nodes/nproc=196 on
+! dcgp_usr_prod for the promoted $FAST baseline.
+!
+! This is a version-controlled reference copy of the domain/physics
+! parameters (AD-8), not the canonical copy itself -- see
+! franco/RegCM-data/EURR12/EUR12_namelist.in. Unrelated to
+! Testing/CORDEX/EUR-12_RegCM5_ERA5.namelist, a different, larger grid
+! (415x427x30).
+&dimparam
+    iy = 275
+    jx = 275
+    kz = 36
+/
+
+&coreparam
+    idynamic = 3
+/
+
+&geoparam
+    iproj = 'ROTLLR'
+    ds = -0.11
+    clat = 50.0
+    clon = 6.6
+    plat = 40.0
+    plon = 186.6
+/
+
+&terrainparam
+    domname = 'EURR-12'
+    h2opct = 50.0
+    h2ohgt = .false.
+    dirter = '/set/this/to/where/your/domain/file/is'
+    inpter = '/set/this/to/where/your/surface/dataset/is'
+/
+
+&boundaryparam
+    nspgx = 31
+    nspgd = 31
+    high_nudge = 6.0
+    medium_nudge = 4.0
+    low_nudge = 2.0
+/
+
+&cldparam
+    ncld = 0
+/
+
+&globdatparam
+    ibdyfrq = 6
+    ssttyp = 'ERA5D'
+    dattyp = 'ERA5'
+    gdate1 = 2009090100,
+    gdate2 = 2009090800,
+    calendar = 'gregorian'
+    dirglob = '/set/this/to/where/your/icbc/for/model/is'
+    inpglob = '/set/this/to/where/your/input/global/data/is'
+/
+
+&restartparam
+    ifrest = .false.
+    mdate0 = 2009090100,
+    mdate1 = 2009090100,
+    mdate2 = 2009090800,
+/
+
+&timeparam
+    dt = 45
+    dtabem = 1
+/
+
+&outparam
+    ifcordex = .true.
+    outnwf = 1.0
+    ifsave = .true.
+    savfrq = 1.0
+    ifatm = .true.
+    atmfrq = 1.0
+    ifrad = .true.
+    radfrq = 1.0
+    ifsts = .true.
+    ifshf = .true.
+    ifsrf = .true.
+    srffrq = 1.0
+    ifsub = .true.
+    subfrq = 1.0
+    iflak = .true.
+    lakfrq = 1.0
+    ifchem = .true.
+    ifopt = .false.
+    chemfrq = 1.0
+    dirout = '/set/this/to/where/your/output/files/will/be/written'
+    lsync = .false.
+    do_parallel_netcdf_in = .true.
+    do_parallel_netcdf_out = .false.
+/
+
+&physicsparam
+    iboudy = 5
+    ibltyp = 1
+    icup_lnd = 5
+    icup_ocn = 5
+    ipptls = 2
+    iwavcpl = 0
+    iocnflx = 2
+    iocnrough = 1
+    iocnzoq = 1
+    scenario = 'SSP585'
+    idcsst = 0
+    iseaice = 1
+    icldfrac = 1
+    iclimao3 = 1
+    isolconst = 0
+    iclimaaer = 2
+    radclimpath = '/set/this/to/where/your/aerosol/climatology/data/is'
+/
+
+&clm_inparm
+    fpftcon = 'pft-physiology.c130503.nc'
+    fsnowoptics = 'snicar_optics_5bnd_c090915.nc'
+    fsnowaging = 'snicar_drdt_bst_fit_60_c070416.nc'
+    urban_hac = 'ON_WASTEHEAT'
+    hist_nhtfrq = 0, 1
+    hist_fincl2(1:13) = 'EFLX_LH_TOT_U', 'FGR_U', 'FIRA_U', 'FSA_U', 'FSH_U',
+                        'FSM_U', 'QRUNOFF_U', 'RH2M_U', 'SoilAlpha_U', 'TG_U',
+                        'TREFMNAV_U', 'TREFMXAV_U', 'TSA_U'
+/
+
+&clm_soilhydrology_inparm
+    h2osfcflag = 1
+    origflag = 0
+/
+
+&clm_hydrology1_inparm
+    oldfflag = 0
+/
