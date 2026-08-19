@@ -55,7 +55,7 @@ development_status:
   epic-1: in-progress
   1-1-verify-and-commit-the-regression-diff-tool: done
   1-2-verify-multi-process-count-comparison: done
-  1-3-retire-the-legacy-regression-scripts: backlog
+  1-3-retire-the-legacy-regression-scripts: done
   1-4-establish-trusted-baselines-for-testing-fixtures: backlog
   epic-1-retrospective: optional
 

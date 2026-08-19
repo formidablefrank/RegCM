@@ -132,8 +132,8 @@ No CI pipeline (no `.github/workflows`), no linter/formatter config — style en
 - `Testing/` holds the fixture namelists: `test_001`–`016.in` (small regional domains), `ideal.in`/`ideal_profile.in` (idealized cases), `isc24.in`/`isc24_small.in`/`isc24_profile.in` (profiling/benchmark cases), plus `Testing/CORDEX/*.namelist` (production-scale CORDEX domain configs) and required input data (`RRTM_DATA/`, `CHEM_DATA/`)
 
 **⚠️ There is no working automated regression-diff tool in this repo today:**
-- `Tools/Scripts/BuildBot/testing.py` is written in Python 2 (`print "..."` without parentheses) — it will not run as-is under any interpreter on a modern cluster; treat it as decorative, not a command you can invoke
-- `Tools/Scripts/TestingAndBenchmarking/preproc-compare.py` is a narrow, decade-old tool comparing ICBC initial conditions between RegCM v3 and v4 for 1-month simulations — it is not a general model-output comparison harness
+- `Tools/Scripts/archive/testing.py` (archived from `Tools/Scripts/BuildBot/` in Story 1.3) is written in Python 2 (`print "..."` without parentheses) — it will not run as-is under any interpreter on a modern cluster; treat it as decorative, not a command you can invoke
+- `Tools/Scripts/archive/preproc-compare.py` (archived from `Tools/Scripts/TestingAndBenchmarking/` in Story 1.3) is a narrow, decade-old tool comparing ICBC initial conditions between RegCM v3 and v4 for 1-month simulations — it is not a general model-output comparison harness
 - Do not tell a user to "run the regression tests" as if a working command exists. If asked to add automated regression checking, treat that as its own real task (porting/replacing the BuildBot harness), not a quick add-on to a physics/performance change
 
 **What to actually do instead:**
@@ -207,7 +207,7 @@ No CI pipeline (no `.github/workflows`), no linter/formatter config — style en
 - Don't hardcode `real(8)`/`dp` or invent a second local precision — `rkx` is the only knob (Language Rules)
 - Don't reach for OpenMP/CUDA Fortran — `do concurrent` → OpenACC only (Architecture Rules)
 - Don't trust `Doc/DeveloperGuide/` on precision — it's stale (Language Rules)
-- Don't assume a working regression-diff command exists — `BuildBot/testing.py` is dead Python 2 (Testing Rules)
+- Don't assume a working regression-diff command exists — `archive/testing.py` is dead Python 2 (Testing Rules)
 - Don't put debug/timing instrumentation inside a loop body (Style Rules)
 
 **Performance gotchas:**
