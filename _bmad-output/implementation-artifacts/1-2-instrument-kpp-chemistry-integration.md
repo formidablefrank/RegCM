@@ -4,7 +4,7 @@ baseline_commit: 9db31274be9fbafaca7d655a416f92b2ce98f367
 
 # Story 1.2: Instrument KPP Chemistry Integration
 
-Status: in-review
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -178,3 +178,49 @@ Six further pre-existing, unrelated bugs surfaced while attempting Task 4's live
 6. **`Main/radlib/mod_rad_aerosol.F90:2511`, `aeroppt`** — `RH` array subscript 19 exceeds its declared upper bound of 18 (`forrtl: severe (408)`), triggered whenever `ichem==1` (`mod_atm_interface.F90:1020`), independent of `iclimaaer`. Diagnosed (see Completion Notes): `aeroppt`'s `rh(n,k)` reads are unconditional, but `rt%rh` is allocated shape `(kz,npr)` and only correctly indexed as `rh(k,n)` — the neighboring `pint`/`path` computation already has an `irrtm`-branched transpose fix for this exact pattern; `rh` never received the equivalent treatment. A fix was described (module-level `rh_c(npoints,kz)` array, 6 redirected reads) but never actually landed — no such change exists in the tree. Still open.
 
 Also relevant operationally, not a code bug: 3 of the 7 real IFS driving-data files under `RegCM-data/EURR12/RCMDATA/IFS/` are truncated/incomplete downloads (`IFS_2018102618+000.nc` at 268MB, `IFS_2018102706+000.nc` at 844MB, `IFS_2018102712+000.nc` at 663MB, vs. ~1004MB for the 4 complete files) — worth re-fetching if that data is needed again.
+
+## Suggested Review Order
+
+**Instrumentation code (the actual functional change)**
+
+- Entry point: the reachable, verified `time_begin` call — instruments `integrate` at its own entry, the established granularity for this subsystem.
+  [`mod_cbmz_integrator.F90:168`](../../Main/chemlib/GAS_CBMZ_NEW/mod_cbmz_integrator.F90#L168)
+
+- Matching `time_end` call closing the same timer, single exit, no early `return` to worry about.
+  [`mod_cbmz_integrator.F90:203`](../../Main/chemlib/GAS_CBMZ_NEW/mod_cbmz_integrator.F90#L203)
+
+- Guarded imports: `mod_service` only under `#ifdef DEBUG`; `ik4` unconditional per this file's zero-prior-use convention.
+  [`mod_cbmz_integrator.F90:33`](../../Main/chemlib/GAS_CBMZ_NEW/mod_cbmz_integrator.F90#L33)
+
+- Identical pattern applied to CB6r2's `INTEGRATE` — code-inspection-only, since `GAS_CB6r2` is unwired from the build.
+  [`mod_cb6_Integrator.F90:104`](../../Main/chemlib/GAS_CB6r2/mod_cb6_Integrator.F90#L104)
+
+- CB6r2's matching `time_end`, same case-style fix (`CALL`, not `call`) applied in an earlier review pass.
+  [`mod_cb6_Integrator.F90:154`](../../Main/chemlib/GAS_CB6r2/mod_cb6_Integrator.F90#L154)
+
+**Reapplication and fresh build verification (why this session's commits exist)**
+
+- Why the code needed reapplying: it only ever lived on a stale, unmerged branch that fell behind `develop`.
+  [`1-2-instrument-kpp-chemistry-integration.md:148`](1-2-instrument-kpp-chemistry-integration.md#L148)
+
+- Closes the verification-gap review finding: full GNU/Intel/NVHPC × DEBUG/production matrix, all 6 legs PASS on current `HEAD`.
+  [`1-2-instrument-kpp-chemistry-integration.md:150`](1-2-instrument-kpp-chemistry-integration.md#L150)
+
+**Documentation accuracy (this pass's review-finding fixes)**
+
+- Real contradiction found and fixed: Task 5 was marked both done (checklist) and not-started (Completion Notes).
+  [`1-2-instrument-kpp-chemistry-integration.md:123`](1-2-instrument-kpp-chemistry-integration.md#L123)
+
+- Compact AC-to-verification-method table added, replacing an unstructured chronological narrative per an open review finding.
+  [`1-2-instrument-kpp-chemistry-integration.md:138`](1-2-instrument-kpp-chemistry-integration.md#L138)
+
+**Deferred-work ledger sync (peripheral, six pre-existing bugs/constraints made visible)**
+
+- MOLOCH `morelax_chiten` SIGSEGV under `ichebdy=0` — the most severe of the six, already blocking two other stories.
+  [`deferred-work.md:18`](deferred-work.md#L18)
+
+- `mod_lm_interface.F90:930` pointer-contiguity crash — cross-referenced from three separate stories' deferred-work entries now.
+  [`deferred-work.md:35`](deferred-work.md#L35)
+
+- `drydep_gas` subscript-0 crash, `relax_coefficients` power-of-2 footgun, `ROTLLR` restriction, and the reopened `aeroppt` bug.
+  [`deferred-work.md:22`](deferred-work.md#L22)
