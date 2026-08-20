@@ -197,6 +197,13 @@ No CI pipeline (no `.github/workflows`), no linter/formatter config — style en
 - Regression comparison against a trusted baseline output (manual NCO/CDO — no automated tool exists yet)
 - Documented profiling method: `perf record --call-graph dwarf` (needs `-g` debug symbols) with a flame-graph rendering (Brendan Gregg's `FlameGraph` scripts) identifies hot call stacks; NVIDIA Nsight Systems recovers attribution `perf` cannot, since a compiler-runtime symbol (e.g. `nvfortran`'s `__c_mset16_avx`) can appear with no call stack under `perf`; the `-Minfo=accel` compiler flag reports exactly what a given region offloaded and what data movement it generated (see `_bmad-source/implementation/regcm5-optimization-thesis.pdf`, Appendix A)
 
+**HPC profiling method gotchas (`perf`/Nsight on this cluster, confirmed during Story 4.1's RRTMG profiling pass):**
+- `perf record` must wrap the actual `regcm` process directly, not the outer `mpirun`/`srun` launcher — this cluster bootstraps MPI ranks as independent Slurm job steps, invisible to a `perf`/`nsys` instance tracing the launcher's own process tree; wrap each rank internally instead (`mpirun -n N ./wrapper.sh`)
+- Profiling all ranks individually is not practical; profile rank 0 only, while preserving full rank/node scope for everything else
+- `nsys --trace=osrt,mpi` can stall indefinitely under MPI-collective interception on a wrapped rank while other ranks block waiting on it — drop `mpi` from `--trace` (`osrt` only)
+- This cluster's `nsys` (2024.5.1) rejects `--mpi-impl=intel` (use `mpich`, since Intel MPI is MPICH-derived) and its argument parser does not accept a `--` separator before the target command
+- Automake's recursive `SUBDIRS` builds are not safe with `-j>1` spanning multiple directory levels — a sibling/child directory's link step can start before another directory's library archive has been `ranlib`'d; build a reduced scope as strictly sequential directories, `-jN` only within one flat directory
+
 **"Scientific review" means explicit human sign-off, not a formal board:**
 - In this project that means sign-off from whoever owns the physics being touched (in practice, franco) — don't stall waiting for a review process that doesn't exist, and don't treat its absence as permission to skip the check
 
