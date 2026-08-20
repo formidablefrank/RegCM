@@ -2,7 +2,7 @@
 title: 'Instrument KPP Chemistry Integration'
 type: 'chore'
 created: '2026-08-19'
-status: 'review'
+status: 'done'
 review_loop_iteration: 0
 context: ['{project-root}/_bmad-output/project-context.md']
 baseline_commit: 'f13b95a93b094c974e01945b25f37bf628b36057'
@@ -127,5 +127,5 @@ All six PASS; DEBUG builds correctly compile in the guard, production builds cor
 
 **Peripherals**
 
-- Sprint tracker, currently `review` — a further `/bmad-code-review` pass or direct sign-off decides `done`.
+- Sprint tracker: `done`, per franco's direct sign-off after two `/bmad-review` passes and merge to `develop`.
   [`sprint-status.yaml:78`](sprint-status.yaml#L78)
