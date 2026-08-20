@@ -202,7 +202,9 @@ No CI pipeline (no `.github/workflows`), no linter/formatter config — style en
 - Profiling all ranks individually is not practical; profile rank 0 only, while preserving full rank/node scope for everything else
 - `nsys --trace=osrt,mpi` can stall indefinitely under MPI-collective interception on a wrapped rank while other ranks block waiting on it — drop `mpi` from `--trace` (`osrt` only)
 - This cluster's `nsys` (2024.5.1) rejects `--mpi-impl=intel` (use `mpich`, since Intel MPI is MPICH-derived) and its argument parser does not accept a `--` separator before the target command
-- Automake's recursive `SUBDIRS` builds are not safe with `-j>1` spanning multiple directory levels — a sibling/child directory's link step can start before another directory's library archive has been `ranlib`'d; build a reduced scope as strictly sequential directories, `-jN` only within one flat directory
+
+**Build-parallelism hazard (Automake, confirmed during Story 4.1's cross-vendor build verification):**
+- Recursive `SUBDIRS` builds are not safe with `-j>1` spanning multiple directory levels — a sibling/child directory's link step can start before another directory's library archive has been `ranlib`'d. Build a reduced scope as strictly sequential directories, `-jN` only within one flat directory — e.g. Story 4.1's validated order `external` → `Share` → `Main/mpplib` → `Main/radlib`
 
 **"Scientific review" means explicit human sign-off, not a formal board:**
 - In this project that means sign-off from whoever owns the physics being touched (in practice, franco) — don't stall waiting for a review process that doesn't exist, and don't treat its absence as permission to skip the check

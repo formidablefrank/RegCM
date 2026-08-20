@@ -46,24 +46,9 @@
 - `Share/mod_heatindex.F90`'s DEBUG+OpenACC GPU-port fix (`#if defined(DEBUG) && !defined(OPENACC)` guarding the DEBUG-only diagnostic that calls an un-annotated `fatal()` from inside `!$acc routine seq` code) was applied and verified twice during Story 1.1, then intentionally removed by franco and deferred to the GPU-offloading epic. Re-apply when that epic picks up `mod_heatindex.F90` — see Story 1.1's Dev Agent Record for the full root-cause writeup and verification evidence (job 48709086 reverted/CPU-only, job 48720240 fix reapplied/real GPU codegen confirmed via `-Minfo=accel`).
 - The 11 `bin/*.sh` HPC verification/profiling scripts from Story 1.1 (`slurm-build-*.sh`, `slurm-task2b-*.sh`, `slurm-task3-profile.sh`, `task3-rank0-*-wrap.sh`) are intentionally untracked/gitignored personal tooling, per franco's explicit call during code review — not a gap to close, just noting the deliberate choice so a future reviewer doesn't rediscover and re-litigate it. If this tooling should later become team-shared (e.g. for Epic 1's remaining stories, which reuse the same build/profiling pattern), revisit adding a real `bin/.gitignore` exception and parameterizing the hardcoded personal paths at that point.
 
-- source_spec: `_bmad-output/implementation-artifacts/spec-4-1-instrument-rrtmgs-compute-core.md`
-  summary: `configure.ac`'s PGI/NVHPC vendor-detection fallback probe can make `COMPILER_PGI` simultaneously true alongside another vendor's own `AM_CONDITIONAL` — a real, tracked-source ambiguity, not personal-tooling noise.
-  evidence: `configure.ac:514-527`. A Cray `ftn` wrapper fronting an NVIDIA backend would match both `COMPILER_CRAY` and, via the `--version` banner grep, `COMPILER_PGI`, since nothing excludes a compiler already matched by an earlier pattern. Separately, the fallback's grep (`pgf90` only) is narrower than the direct-match case's `pgf9*` glob, so the two branches aren't equivalent in coverage. Relevant to Epic 5's Story 5.2 (Correct NVHPC Compiler-Identity Detection), the natural owner of this fallback probe.
-- source_spec: `_bmad-output/implementation-artifacts/spec-4-1-instrument-rrtmgs-compute-core.md`
-  summary: `bin/slurm-task2b-build-and-run.sh` never links `Main/regcm` — the build chain stops at `external`/`Share`/`Main/mpplib`/`Main/radlib`, with no `make -C Main` (or equivalent) step.
-  evidence: `bin/slurm-task2b-build-and-run.sh:47-50`. Since the script runs `make distclean` first, a fresh run of this script as committed would fail at `mpirun ... ./Main/regcm` with no executable present.
-- source_spec: `_bmad-output/implementation-artifacts/spec-4-1-instrument-rrtmgs-compute-core.md`
-  summary: `bin/slurm-task3-profile.sh` ships with its entire build/configure section commented out and no assertion that `Main/regcm` exists or was built with the `--enable-profile` flags the header comments claim.
-  evidence: `bin/slurm-task3-profile.sh:50-81`. The job backing this story's "~6.0% RRTMG share" claim (48812653) ran zero `make` invocations, silently reusing a binary from an earlier job — correct in that instance by manual cross-check, but the script has no guardrail against reusing a stale or differently-configured binary on a future run.
-- source_spec: `_bmad-output/implementation-artifacts/spec-4-1-instrument-rrtmgs-compute-core.md`
-  summary: The `irrtm = 1` namelist mutation (`sed -i "/^&physicsparam/a\ irrtm = 1"`) is never verified to have taken effect in the three scripts that rely on it.
-  evidence: `bin/slurm-task2b-build-and-run.sh:73`; `bin/slurm-task2b-run.sh`; `bin/slurm-task3-profile.sh:90`. The follow-up `grep` only logs matches, it doesn't gate on them. Since `irrtm=1` is this story's own documented "single most important precondition," a silent no-op here would let a run report PASS while actually exercising `colmod3` instead of RRTMG.
-- source_spec: `_bmad-output/implementation-artifacts/spec-4-1-instrument-rrtmgs-compute-core.md`
-  summary: `RANK="${PMI_RANK:-${SLURM_PROCID:-0}}"` in both rank-0 profiling wrapper scripts silently defaults every rank to `"0"` if neither env var is populated.
-  evidence: `bin/task3-rank0-perf-wrap.sh:11`; `bin/task3-rank0-nsys-wrap.sh:11`. Would make all 224 ranks race on the same `perf.data`/`nsys-rep` output path instead of failing clearly.
-- source_spec: `_bmad-output/implementation-artifacts/spec-4-1-instrument-rrtmgs-compute-core.md`
-  summary: The six vendor/config build scripts capture `CONFIGURE_STATUS` but proceed to run the full `make` chain unconditionally even when configure failed.
-  evidence: `bin/slurm-build-{gnu,intel,nvhpc}-{debug,production}.sh`, `bin/slurm-task2b-build-and-run.sh`. Wastes a compute allocation and produces confusing logs before `BUILD_STATUS` eventually reports FAIL.
+- source_spec: `_bmad-output/implementation-artifacts/spec-4-2-instrument-kpp-chemistry-integration.md`
+  summary: 3 of the 7 real IFS driving-data files under `RegCM-data/EURR12/RCMDATA/IFS/` are truncated/incomplete downloads, surfaced while constructing a small-domain fixture for Story 4.2's runtime-verification attempt.
+  evidence: `IFS_2018102618+000.nc` at 268MB, `IFS_2018102706+000.nc` at 844MB, `IFS_2018102712+000.nc` at 663MB, vs. ~1004MB for the 4 complete files. Worth re-fetching if that data is needed again by a future story.
 
 ## Deferred from: code review of 1-2-verify-multi-process-count-comparison (2026-08-19)
 
