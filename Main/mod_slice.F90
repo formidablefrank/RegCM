@@ -133,13 +133,9 @@ module mod_slice
         atms%th3d(j,i,k) = atms%tb3d(j,i,k) * &
                             (p00/atms%pb3d(j,i,k))**rovcp
       end do
-      do concurrent ( j = jci1:jci2, i = ici1:ici2, k = 1:kz )
-        atms%qxb3d(j,i,k,iqv) = max(atms%qxb3d(j,i,k,iqv),minqq)
-      end do
-      do concurrent ( j = jci1:jci2, i = ici1:ici2, &
-                      k = 1:kz, n = iqfrst:nqx )
-        if ( atms%qxb3d(j,i,k,n) < 1.0E-20_rkx) then
-          atms%qxb3d(j,i,k,n) = d_zero
+      do concurrent ( j = jci1:jci2, i = ici1:ici2, k = 1:kz, n = 1:nqx )
+        if ( atms%qxb3d(j,i,k,n) < qxcheckval(n) ) then
+          atms%qxb3d(j,i,k,n) = qxzeroval(n)
         end if
       end do
       if ( ichem == 1 ) then
