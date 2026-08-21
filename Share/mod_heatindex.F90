@@ -186,7 +186,7 @@ module mod_heatindex
     ra_un   = 1.0_rkx/(hc+hr)
   end function ra_un
 
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(OPENACC)
   type(eqvar) function initial_find_eqvar(ta,rh) result(res)
 #else
   pure type(eqvar) function initial_find_eqvar(ta,rh) result(res)
@@ -242,7 +242,7 @@ module mod_heatindex
     res%var = [ phi,rf,rs,dtcdt ]
   end function initial_find_eqvar
 
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(OPENACC)
   function find_eqvar(ta,rh)
 #else
   pure function find_eqvar(ta,rh)
@@ -294,7 +294,7 @@ module mod_heatindex
     find_eqvar = [ phi,rf,rs,dtcdt ]
   end function find_eqvar
 
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(OPENACC)
   real(rkx) function find_t(eqvar_indx, eqvar)
 #else
   pure real(rkx) function find_t(eqvar_indx, eqvar)
@@ -325,7 +325,7 @@ module mod_heatindex
     find_t = t
   end function find_t
 
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(OPENACC)
   real(rkx) function heatindex(ta,rh)
 #else
   pure real(rkx) function heatindex(ta,rh)
@@ -354,7 +354,7 @@ module mod_heatindex
 
   !!!!!!!!!!!!!!!!! root solvers !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(OPENACC)
   real(rkx) function solve1(ta,pa,rs,x1,x2,err,maxiter)
 #else
   pure real(rkx) function solve1(ta,pa,rs,x1,x2,err,maxiter)
@@ -369,7 +369,7 @@ module mod_heatindex
     b = x2
     fa = (a-ta)/ra(a,ta) + (pc-pa)/(zs(rs)+za) - (tc-a)/rs
     fb = (b-ta)/ra(b,ta) + (pc-pa)/(zs(rs)+za) - (tc-b)/rs
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(OPENACC)
     if ( ( fa > 0.0_rkx .and. fb > 0.0_rkx ) .or. &
          ( fa < 0.0_rkx .and. fb < 0.0_rkx ) ) then
       write(stderr,*) 'solve1 : ta, pa, rs : ', ta, pa, rs
@@ -388,13 +388,13 @@ module mod_heatindex
         a = c
       end if
     end do
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(OPENACC)
     if ( iter == maxiter+1 ) write(stderr,*) "maxiter, solve1,"
 #endif
     solve1 = c
   end function solve1
 
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(OPENACC)
   real(rkx) function solve2(ta,pa,rs,x1,x2,err,maxiter)
 #else
   pure real(rkx) function solve2(ta,pa,rs,x1,x2,err,maxiter)
@@ -409,7 +409,7 @@ module mod_heatindex
     b = x2
     fa = (a-ta)/ra_bar(a,ta) + (pc-pa)/(zs(rs)+za_bar) - (tc-a)/rs
     fb = (b-ta)/ra_bar(b,ta) + (pc-pa)/(zs(rs)+za_bar) - (tc-b)/rs
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(OPENACC)
     if ( ( fa > 0.0_rkx .and. fb > 0.0_rkx ) .or. &
          ( fa < 0.0_rkx .and. fb < 0.0_rkx ) ) then
       write(stderr,*) 'solve2'
@@ -428,13 +428,13 @@ module mod_heatindex
         a = c
       end if
     end do
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(OPENACC)
     if ( iter == maxiter+1 ) write(stderr,*) "maxiter, solve2"
 #endif
     solve2 = c
   end function solve2
 
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(OPENACC)
   real(rkx) function solve3(ta,pa,rs,ts_bar,x1,x2,err,maxiter)
 #else
   pure real(rkx) function solve3(ta,pa,rs,ts_bar,x1,x2,err,maxiter)
@@ -453,7 +453,7 @@ module mod_heatindex
     fb = (b-ta)/ra_bar(b,ta) + &
       (pc-pa)*(b-ta)/((b-ta)*(zs(rs)+za_bar)+r*ra_bar(b,ta)*(ts_bar-b)) - &
       (tc-ts_bar)/rs
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(OPENACC)
     if ( ( fa > 0.0_rkx .and. fb > 0.0_rkx ) .or. &
          ( fa < 0.0_rkx .and. fb < 0.0_rkx ) ) then
       write(stderr,*) 'solve3 : ta, pa, rs, ts_bar, a, b, fa, fb : ', &
@@ -474,13 +474,13 @@ module mod_heatindex
         a = c
       end if
     end do
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(OPENACC)
     if ( iter == maxiter+1 ) write(stderr,*) "maxiter, solve3"
 #endif
     solve3 = c
   end function solve3
 
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(OPENACC)
   real(rkx) function solve4(ta,pa,x1,x2,err,maxiter)
 #else
   pure real(rkx) function solve4(ta,pa,x1,x2,err,maxiter)
@@ -497,7 +497,7 @@ module mod_heatindex
       (pc-pa)/(zs((tc-a)/(q-qv(ta,pa)))+za_un)-(q-qv(ta,pa))
     fb = (b-ta)/ra_un(b,ta) + &
       (pc-pa)/(zs((tc-b)/(q-qv(ta,pa)))+za_un)-(q-qv(ta,pa))
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(OPENACC)
     if ( ( fa > 0.0_rkx .and. fb > 0.0_rkx ) .or. &
          ( fa < 0.0_rkx .and. fb < 0.0_rkx ) ) then
       write(stderr,*) 'solve4'
@@ -517,13 +517,13 @@ module mod_heatindex
         a = c
       end if
     end do
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(OPENACC)
     if ( iter == maxiter+1 ) write(stderr,*) "maxiter, solve4"
 #endif
     solve4 = c
   end function solve4
 
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(OPENACC)
   real(rkx) function solve5(ta,pa,x1,x2,err,maxiter)
 #else
   pure real(rkx) function solve5(ta,pa,x1,x2,err,maxiter)
@@ -538,7 +538,7 @@ module mod_heatindex
     b = x2
     fa = (a-ta)/ra_un(a,ta) + (phi_salt*pvstar(a)-pa)/za_un -(q-qv(ta,pa))
     fb = (b-ta)/ra_un(b,ta) + (phi_salt*pvstar(b)-pa)/za_un -(q-qv(ta,pa))
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(OPENACC)
     if ( ( fa > 0.0_rkx .and. fb > 0.0_rkx ) .or. &
          ( fa < 0.0_rkx .and. fb < 0.0_rkx ) ) then
       write(stderr,*) 'solve5'
@@ -557,13 +557,13 @@ module mod_heatindex
         a = c
       end if
     end do
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(OPENACC)
     if ( iter == maxiter+1 ) write(stderr,*) "maxiter, solve5"
 #endif
     solve5 = c
   end function solve5
 
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(OPENACC)
   real(rkx) function solvei(eqvar)
 #else
   pure real(rkx) function solvei(eqvar)
@@ -580,7 +580,7 @@ module mod_heatindex
     fa = tmp(1) - eqvar
     tmp = find_eqvar(b,1.0_rkx)
     fb = tmp(1) - eqvar
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(OPENACC)
     if ( ( fa > 0.0_rkx .and. fb > 0.0_rkx ) .or. &
          ( fa < 0.0_rkx .and. fb < 0.0_rkx ) ) then
       write(stderr,*) 'solvei'
@@ -600,13 +600,13 @@ module mod_heatindex
         a = c
       end if
     end do
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(OPENACC)
     if ( iter == maxiter+1 ) write(stderr,*) "maxiter, solvei"
 #endif
     solvei = c
   end function solvei
 
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(OPENACC)
   real(rkx) function solveii(eqvar)
 #else
   pure real(rkx) function solveii(eqvar)
@@ -623,7 +623,7 @@ module mod_heatindex
     fa = tmp(2) - eqvar
     tmp = find_eqvar(b,min(1.0_rkx,pa0/pvstar(b)))
     fb = tmp(2) - eqvar
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(OPENACC)
     if ( ( fa > 0.0_rkx .and. fb > 0.0_rkx ) .or. &
          ( fa < 0.0_rkx .and. fb < 0.0_rkx ) ) then
       write(stderr,*) 'solveii : a, b, fa, fb, eqvar : ', &
@@ -644,13 +644,13 @@ module mod_heatindex
         a = c
       end if
     end do
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(OPENACC)
     if ( iter == maxiter+1 ) write(stderr,*) "maxiter, solveii"
 #endif
     solveii = c
   end function solveii
 
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(OPENACC)
   real(rkx) function solveiii(eqvar)
 #else
   pure real(rkx) function solveiii(eqvar)
@@ -667,7 +667,7 @@ module mod_heatindex
     fa = tmp(3) - eqvar
     tmp = find_eqvar(b,pa0/pvstar(b))
     fb = tmp(3) - eqvar
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(OPENACC)
     if ( ( fa > 0.0_rkx .and. fb > 0.0_rkx ) .or. &
          ( fa < 0.0_rkx .and. fb < 0.0_rkx ) ) then
       write(stderr,*) 'solveiii'
@@ -687,13 +687,13 @@ module mod_heatindex
         a = c
       end if
     end do
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(OPENACC)
     if ( iter == maxiter+1 ) write(stderr,*) "maxiter, solveiii"
 #endif
     solveiii = c
   end function solveiii
 
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(OPENACC)
   real(rkx) function solveiv(eqvar)
 #else
   pure real(rkx) function solveiv(eqvar)
@@ -710,7 +710,7 @@ module mod_heatindex
     fa = tmp(4) - eqvar
     tmp = find_eqvar(b,pa0/pvstar(b))
     fb = tmp(4) - eqvar
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(OPENACC)
     if ( ( fa > 0.0_rkx .and. fb > 0.0_rkx ) .or. &
          ( fa < 0.0_rkx .and. fb < 0.0_rkx ) ) then
       write(stderr,*) 'solveiv : eqvar : ', eqvar
@@ -730,7 +730,7 @@ module mod_heatindex
         a = c
       end if
     end do
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(OPENACC)
     if ( iter == maxiter+1 ) write(stderr,*) "maxiter, solveiv"
 #endif
     solveiv = c

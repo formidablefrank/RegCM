@@ -4297,10 +4297,28 @@ module mod_ncout
     real(rkx), pointer, contiguous, dimension(:,:,:,:) :: pnt4d => null( )
     class(ncvariable_standard), pointer :: vp
     integer(ik4) :: ivar, jfile
+#ifdef DEBUG
+    ! io_gather_hist/io_write_hist/io_wait_hist (AD-17): per-write-event
+    ! gather/write/wait timing across the serial, HDF5-parallel and
+    ! PnetCDF-parallel diagnostic-output paths. io_wait_hist wraps
+    ! outstream_sync's enqueue call only -- under async-netcdf this is
+    ! enqueue latency, not true blocking completion (the true blocking
+    ! wait, async_netcdf_wait_all, is reached only via the out-of-scope
+    ! flush_output_streams).
+    character(len=dbgslen) :: gather_name = 'io_gather_hist'
+    character(len=dbgslen) :: write_name = 'io_write_hist'
+    character(len=dbgslen) :: wait_name = 'io_wait_hist'
+    integer(ik4), save :: gather_idx = 0
+    integer(ik4), save :: write_idx = 0
+    integer(ik4), save :: wait_idx = 0
+#endif
     !@acc call nvtxStartRange("write_record_output_stream")
     if ( .not. parallel_out .and. myid /= iocpu ) then
       do ivar = 1, outstream(istream)%nvar
         vp => outstream(istream)%ncvars%vlist(ivar)%vp
+#ifdef DEBUG
+        call time_begin(gather_name,gather_idx)
+#endif
         select type(vp)
           type is (ncvariable2d_mixed)
             if ( .not. vp%lrecords ) cycle
@@ -4318,7 +4336,23 @@ module mod_ncout
           class default
             cycle
         end select
+#ifdef DEBUG
+        call time_end(gather_name,gather_idx)
+#endif
       end do
+
+#ifdef DEBUG
+      ! Non-I/O ranks never write or wait in serial mode, but
+      ! mod_service's time_print requires every rank to register the
+      ! same number of distinct timer labels (allgather_i on n_of_nsubs,
+      ! "different trees on different pe" otherwise) -- register
+      ! io_write_hist/io_wait_hist here too, truthfully reporting zero
+      ! elapsed time for this rank's non-existent write/wait phase.
+      call time_begin(write_name,write_idx)
+      call time_end(write_name,write_idx)
+      call time_begin(wait_name,wait_idx)
+      call time_end(wait_name,wait_idx)
+#endif
 
       ! If not parallel output, only the master proc writes output files
       return
@@ -4359,6 +4393,9 @@ module mod_ncout
       ! If not parallel output, collect data
 
       if ( .not. parallel_out ) then
+#ifdef DEBUG
+        call time_begin(gather_name,gather_idx)
+#endif
         select type(vp)
           type is (ncvariable2d_mixed)
             if ( .not. vp%lrecords ) cycle
@@ -4391,6 +4428,9 @@ module mod_ncout
           class default
             cycle
         end select
+#ifdef DEBUG
+        call time_end(gather_name,gather_idx)
+#endif
       else
         select type(vp)
           type is (ncvariable2d_mixed)
@@ -4437,7 +4477,13 @@ module mod_ncout
       end if
 #endif
 
+#ifdef DEBUG
+      call time_begin(write_name,write_idx)
+#endif
       call outstream_writevar(outstream(istream)%ncout(jfile),vp)
+#ifdef DEBUG
+      call time_end(write_name,write_idx)
+#endif
 
       ! Reset pointers
 
@@ -4466,7 +4512,14 @@ module mod_ncout
         end select
       end if
 
+#ifdef DEBUG
+      ! Enqueue latency only -- see the io_wait_hist note above.
+      call time_begin(wait_name,wait_idx)
+#endif
       call outstream_sync(outstream(istream)%ncout(jfile))
+#ifdef DEBUG
+      call time_end(wait_name,wait_idx)
+#endif
 
     end do
     !@acc call nvtxEndRange
@@ -4486,9 +4539,27 @@ module mod_ncout
     real(rkx), pointer, contiguous, dimension(:,:) :: tmp2d
     real(rkx), pointer, contiguous, dimension(:,:) :: pnt2d => null( )
     integer(ik4) :: jfile
+#ifdef DEBUG
+    ! io_gather_hist/io_write_hist (AD-17): direct, not-looped wrap --
+    ! see write_record_output_stream for the primary per-event pattern.
+    character(len=dbgslen) :: gather_name = 'io_gather_hist'
+    character(len=dbgslen) :: write_name = 'io_write_hist'
+    integer(ik4), save :: gather_idx = 0
+    integer(ik4), save :: write_idx = 0
+#endif
 
     if ( .not. parallel_out .and. myid /= iocpu ) then
+#ifdef DEBUG
+      call time_begin(gather_name,gather_idx)
+#endif
       call grid_collect(vp%rval,pnt2d,vp%j1,vp%j2,vp%i1,vp%i2)
+#ifdef DEBUG
+      call time_end(gather_name,gather_idx)
+      ! Symmetric registration for mod_service's time_print cross-rank
+      ! check (see write_record_output_stream) -- this rank never writes.
+      call time_begin(write_name,write_idx)
+      call time_end(write_name,write_idx)
+#endif
       ! If not parallel output, only the master proc writes output files
       return
     end if
@@ -4511,7 +4582,13 @@ module mod_ncout
     ! If not parallel output, collect data
 
     if ( .not. parallel_out ) then
+#ifdef DEBUG
+      call time_begin(gather_name,gather_idx)
+#endif
       call grid_collect(vp%rval,pnt2d,vp%j1,vp%j2,vp%i1,vp%i2)
+#ifdef DEBUG
+      call time_end(gather_name,gather_idx)
+#endif
       vp%j1 = outstream(istream)%jg1
       vp%j2 = outstream(istream)%jg2
       vp%i1 = outstream(istream)%ig1
@@ -4524,8 +4601,12 @@ module mod_ncout
     if ( debug_level > 2 ) then
       write(ndebug,*) 'Writing var ',trim(vp%vname)
     end if
+    call time_begin(write_name,write_idx)
 #endif
     call outstream_writevar(outstream(istream)%ncout(jfile),vp)
+#ifdef DEBUG
+    call time_end(write_name,write_idx)
+#endif
 
     ! Reset pointers
 
@@ -4547,9 +4628,27 @@ module mod_ncout
     real(rkx), pointer, contiguous, dimension(:,:,:) :: tmp3d
     real(rkx), pointer, contiguous, dimension(:,:,:) :: pnt3d => null( )
     integer(ik4) :: jfile
+#ifdef DEBUG
+    ! io_gather_hist/io_write_hist (AD-17): direct, not-looped wrap --
+    ! see write_record_output_stream for the primary per-event pattern.
+    character(len=dbgslen) :: gather_name = 'io_gather_hist'
+    character(len=dbgslen) :: write_name = 'io_write_hist'
+    integer(ik4), save :: gather_idx = 0
+    integer(ik4), save :: write_idx = 0
+#endif
 
     if ( .not. parallel_out .and. myid /= iocpu ) then
+#ifdef DEBUG
+      call time_begin(gather_name,gather_idx)
+#endif
       call grid_collect(vp%rval,pnt3d,vp%j1,vp%j2,vp%i1,vp%i2,vp%k1,vp%k2)
+#ifdef DEBUG
+      call time_end(gather_name,gather_idx)
+      ! Symmetric registration for mod_service's time_print cross-rank
+      ! check (see write_record_output_stream) -- this rank never writes.
+      call time_begin(write_name,write_idx)
+      call time_end(write_name,write_idx)
+#endif
       ! If not parallel output, only the master proc writes output files
       return
     end if
@@ -4572,7 +4671,13 @@ module mod_ncout
     ! If not parallel output, collect data
 
     if ( .not. parallel_out ) then
+#ifdef DEBUG
+      call time_begin(gather_name,gather_idx)
+#endif
       call grid_collect(vp%rval,pnt3d,vp%j1,vp%j2,vp%i1,vp%i2,vp%k1,vp%k2)
+#ifdef DEBUG
+      call time_end(gather_name,gather_idx)
+#endif
       vp%j1 = outstream(istream)%jg1
       vp%j2 = outstream(istream)%jg2
       vp%i1 = outstream(istream)%ig1
@@ -4585,8 +4690,12 @@ module mod_ncout
     if ( debug_level > 2 ) then
       write(ndebug,*) 'Writing var ',trim(vp%vname)
     end if
+    call time_begin(write_name,write_idx)
 #endif
     call outstream_writevar(outstream(istream)%ncout(jfile),vp)
+#ifdef DEBUG
+    call time_end(write_name,write_idx)
+#endif
 
     ! Reset pointers
 

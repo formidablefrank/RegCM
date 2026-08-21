@@ -570,20 +570,19 @@ module mod_clm_snicar
         do i = snl_top, snl_btm, 1
           if ( (snw_rds_lcl(i) < snw_rds_min_tbl) .or. &
                (snw_rds_lcl(i) > snw_rds_max_tbl) ) then
+#ifndef OPENACC
+            ! NVHPC's -stdpar=gpu/OpenACC device code cannot lower Fortran
+            ! I/O (NVFORTRAN-S-1058, "Call to NVHPC runtime function not
+            ! supported - pgf90io_begin") -- these diagnostic writes are
+            ! host-only; the device path below just sets `found`.
             write (stderr,*) "SNICAR ERROR: snow grain radius of ", &
                     snw_rds_lcl(i), " out of bounds."
-#ifdef OPENACC
-            !gpu does not allow "trim"
-            write (stderr,*) "date = ", rcmtimer%str( )
-#else
             write (stderr,*) "date = ", trim(rcmtimer%str( ))
-#endif
             write (stderr,*) "flg_snw_ice= ", flg_snw_ice
             write (stderr,*) "column: ", c_idx, " level: ", i, &
                     " snl(c)= ", snl_lcl
             write (stderr,*) "lat= ", lat_coord, " lon= ", lon_coord
             write (stderr,*) "h2osno(c)= ", h2osno_lcl
-#ifndef OPENACC
             call fatal(__FILE__,__LINE__,'clm now stopping')
 #else
             found = .true.
@@ -1113,6 +1112,12 @@ module mod_clm_snicar
             else if ( (trip == 1) .and. (flg_dover == 4) .and. &
                       (err_idx >= 20) ) then
               flg_dover = 0
+#ifndef OPENACC
+              ! NVHPC's -stdpar=gpu/OpenACC device code cannot lower
+              ! Fortran I/O (NVFORTRAN-S-1058, "Call to NVHPC runtime
+              ! function not supported - pgf90io_begin") -- these
+              ! diagnostic writes are host-only; the device path below
+              ! just sets `found`.
               write(stderr,*) "SNICAR ERROR: FOUND A WORMHOLE."
               write(stderr,*) " STUCK IN INFINITE LOOP!"
               write(stderr,*) " Called from: ", flg_snw_ice
@@ -1130,7 +1135,6 @@ module mod_clm_snicar
               write(stderr,*) "column index: ", c_idx
               write(stderr,*) "landunit type", ltype(l_idx)
               write(stderr,*) "frac_sno: ", frac_sno(c_idx)
-#ifndef OPENACC
               call fatal(__FILE__,__LINE__,'clm now stopping')
 #else
               found = .true.
@@ -1146,16 +1150,13 @@ module mod_clm_snicar
           energy_sum = (mu_not*rpi*flx_slrd_lcl(bnd_idx)) + &
                   flx_slri_lcl(bnd_idx) - (F_abs_sum + F_btm_net + F_sfc_pls)
           if ( abs(energy_sum) > 0.00001_rk8 ) then
-#ifdef OPENACC
-            write (stderr,*) &
-               "SNICAR ERROR: Energy conservation error of : ", energy_sum, &
-               " at : ", rcmtimer%str( ), " at column: ", c_idx
-#else
+#ifndef OPENACC
+            ! See the snow-grain-radius check above: NVHPC's -stdpar=gpu
+            ! device code cannot lower Fortran I/O (NVFORTRAN-S-1058),
+            ! so this diagnostic write is host-only.
             write (stderr,"(a,e14.7,a,i6,a,i6)") &
                "SNICAR ERROR: Energy conservation error of : ", energy_sum, &
                " at : ", trim(rcmtimer%str( )), " at column: ", c_idx
-#endif
-#ifndef OPENACC
             call fatal(__FILE__,__LINE__,'clm now stopping')
 #else
             found = .true.
@@ -1166,15 +1167,13 @@ module mod_clm_snicar
 
           ! Check that albedo is less than 1
           if ( albout_lcl(bnd_idx) > 1.0 ) then
-#ifdef OPENACC
-            write (stderr,*) &
-                 "SNICAR ERROR: Albedo > 1.0 at c: ", c_idx, " at ", &
-                 rcmtimer%str( )
-#else
+#ifndef OPENACC
+            ! See the snow-grain-radius check above: NVHPC's -stdpar=gpu
+            ! device code cannot lower Fortran I/O (NVFORTRAN-S-1058),
+            ! so these diagnostic writes are host-only.
             write (stderr,*) &
                  "SNICAR ERROR: Albedo > 1.0 at c: ", c_idx, " at ", &
                  trim(rcmtimer%str( ))
-#endif
             write (stderr,*) "SNICAR STATS: bnd_idx= ",bnd_idx
             write (stderr,*) "SNICAR STATS: albout_lcl(bnd)= ", &
                     albout_lcl(bnd_idx), " albsfc_lcl(bnd_idx)= ", &
@@ -1199,7 +1198,6 @@ module mod_clm_snicar
             write (stderr,*) "SNICAR STATS: snw_rds(-2)= ", snw_rds(c_idx,-2)
             write (stderr,*) "SNICAR STATS: snw_rds(-1)= ", snw_rds(c_idx,-1)
             write (stderr,*) "SNICAR STATS: snw_rds(0)= ", snw_rds(c_idx,0)
-#ifndef OPENACC
             call fatal(__FILE__,__LINE__,'clm now stopping')
 #else
             found = .true.
