@@ -45,7 +45,7 @@
 # identifiers and are unchanged by this reordering.
 
 generated: 2026-07-06
-last_updated: 2026-08-20
+last_updated: 2026-08-21
 project: RegCM
 project_key: NOKEY
 tracking_system: file-system
@@ -76,7 +76,7 @@ development_status:
   epic-4: in-progress
   4-1-instrument-rrtmgs-compute-core: done
   4-2-instrument-kpp-chemistry-integration: done
-  4-3-instrument-diagnostic-output-gather-and-write: backlog
+  4-3-instrument-diagnostic-output-gather-and-write: in-progress
   4-4-baseline-profiling-run-and-published-report: backlog
   4-5-long-running-memory-growth-investigation: backlog
   4-6-valgrind-memory-leak-and-error-check: backlog
