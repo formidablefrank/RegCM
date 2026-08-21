@@ -120,10 +120,6 @@ module mod_bdycod
   integer(ik4) :: nztop
   real(rkx), parameter :: zztop = 18000.0_rkx
   real(rkx), pointer, dimension(:), contiguous :: gmeanz
-  real(rkx), parameter, dimension(10) :: qxbval = &
-    [ 1.0e-8_rkx, 0.0_rkx, 0.0_rkx,       &  ! qv, qc, qi
-      0.0_rkx, 0.0_rkx, 0.0_rkx, 0.0_rkx, &  ! qr, qs, qg, qh,
-      1.0e10_rkx, 100.0_rkx, 0.01_rkx ]      ! ncc, nc, nr
 
   interface morelax
     module procedure morelax_external
@@ -422,10 +418,16 @@ module mod_bdycod
     implicit none
     if ( idynamic == 3 ) then
       call getmem(hefc,1,nspgx,1,kz,'bdycon:hefc')
-      call getmem(zn1,jde1,jde2,ide1,ide2,'bdycon:zn1')
-      call getmem(cnudge,1,kz,'bdycon:cnudge')
-      call getmem(tnudge,1,kz,'bdycon:tnudge')
-      call getmem(gmeanz,1,kz,'bdycon:gmeanz')
+      if ( mo_spectral_nudge ) then
+        call getmem(zn1,jde1,jde2,ide1,ide2,'bdycon:zn1')
+        call getmem(cnudge,1,kz,'bdycon:cnudge')
+      end if
+      if ( mo_top_nudge ) then
+        call getmem(tnudge,1,kz,'bdycon:tnudge')
+      end if
+      if ( mo_top_nudge .or. mo_spectral_nudge ) then
+        call getmem(gmeanz,1,kz,'bdycon:gmeanz')
+      end if
     else
       if ( iboudy == 1 .or. idynamic == 2 ) then
         call getmem(fcx,2,nspgx-1,'bdycon:fcx')
@@ -502,19 +504,21 @@ module mod_bdycod
     rtb = d_one/dtbdys
 
     if ( idynamic == 3 ) then
-      np = real(jx*iy,rk8)
-      nztop = 0
-      do k = 1, kz
-        meanz = 0.0_rkx
-        do concurrent ( j = jce1:jce2, i = ice1:ice2 )
-          meanz = meanz + real(mo_atm%zeta(j,i,k),rk8)/np
+      if ( mo_top_nudge .or. mo_spectral_nudge ) then
+        np = real(njcross*nicross,rk8)
+        nztop = 0
+        do k = 1, kz
+          meanz = 0.0_rkx
+          do concurrent ( j = jce1:jce2, i = ice1:ice2 )
+            meanz = meanz + real(mo_atm%zeta(j,i,k),rk8)/np
+          end do
+          call sumall(meanz,mpmeanz)
+          gmeanz(k) = real(mpmeanz,rkx)
+          if ( gmeanz(k) > zztop ) then
+            nztop = nztop + 1
+          end if
         end do
-        call sumall(meanz,mpmeanz)
-        gmeanz(k) = real(mpmeanz,rkx)
-        if ( gmeanz(k) > zztop ) then
-          nztop = nztop + 1
-        end if
-      end do
+      end if
       do k = 1, kz
         hefc(1,k) = 1.0_rkx      ! External solution updated in bdyval
         hefc(nspgx,k) = 0.0_rkx  ! Internal solution computed
@@ -543,18 +547,22 @@ module mod_bdycod
         call vprntv(hefc(:,1),nspgx,'Top boundary coefficients ')
         call vprntv(hefc(:,kz),nspgx,'Bottom boundary coefficients ')
       end if
-      if ( mo_spectral_nudge ) call lowpass_init( )
-      do k = 1, kz
-        if ( k <= nztop ) then
-          tnudge(k) = sin(d_half*mathpi*(gmeanz(k)-zztop)/(mo_h-zztop))**2
-        else
-          tnudge(k) = 0.0_rkx
+      if ( mo_spectral_nudge ) then
+        call lowpass_init( )
+      end if
+      if ( mo_top_nudge ) then
+        do k = 1, kz
+          if ( k <= nztop ) then
+            tnudge(k) = sin(d_half*mathpi*(gmeanz(k)-zztop)/(mo_h-zztop))**2
+          else
+            tnudge(k) = 0.0_rkx
+          end if
+        end do
+        if ( myid == 0 ) then
+          write(stdout, '(a,i3,a,f6.2,a)') ' Top damping on ',nztop, &
+            ' layers above ', zztop/1000, ' km from ground level.'
+          call vprntv(tnudge,nztop,'Damping coefficients : ')
         end if
-      end do
-      if ( myid == 0 ) then
-        write(stdout, '(a,i3,a,f6.2,a)') ' Top damping on ',nztop, &
-          ' layers above ', zztop/1000, ' km from ground level.'
-        call vprntv(tnudge,nztop,'Damping coefficients : ')
       end if
     else
       if ( iboudy == 1 .or. iboudy == 5 .or. iboudy == 6 ) then
@@ -1174,6 +1182,7 @@ module mod_bdycod
       !$acc end kernels
     else if ( idynamic == 3 ) then
       !$acc kernels
+      ps0(:,:) = ps1(:,:)
       pai0(:,:,:) = pai1(:,:,:)
       !$acc end kernels
     else
@@ -1660,17 +1669,14 @@ module mod_bdycod
           if ( present_qi .and. n == iqi ) cycle
           qxint = mo_atm%qx(jci1,i,k,n)
           if ( mo_atm%u(jde1,i,k) > d_zero ) then
-            mo_atm%qx(jce1,i,k,n) = 0.5_rkx*(qxbval(n)+qxint)
+            mo_atm%qx(jce1,i,k,n) = qxzeroval(n)
           else
             mo_atm%qx(jce1,i,k,n) = qxint
-          end if
-          if ( mo_atm%qx(jce1,i,k,n) < 1.0E-12_rkx ) then
-            mo_atm%qx(jce1,i,k,n) = 0.0_rkx
           end if
         end do
         do concurrent ( i = ici1:ici2, k = 1:kz )
           if ( mo_atm%u(jde1,i,k) > d_zero ) then
-            mo_atm%w(jce1,i,k) = 0.1_rkx*mo_atm%w(jci1,i,k)
+            mo_atm%w(jce1,i,k) = 0.0_rkx
           else
             mo_atm%w(jce1,i,k) = mo_atm%w(jci1,i,k)
           end if
@@ -1721,17 +1727,14 @@ module mod_bdycod
           if ( present_qi .and. n == iqi ) cycle
           qxint = mo_atm%qx(jci2,i,k,n)
           if ( mo_atm%u(jde2,i,k) < d_zero ) then
-            mo_atm%qx(jce2,i,k,n) = 0.5_rkx*(qxbval(n)+qxint)
+            mo_atm%qx(jce2,i,k,n) = qxzeroval(n)
           else
             mo_atm%qx(jce2,i,k,n) = qxint
-          end if
-          if ( mo_atm%qx(jce2,i,k,n) < 1.0E-12_rkx ) then
-            mo_atm%qx(jce2,i,k,n) = 0.0_rkx
           end if
         end do
         do concurrent ( i = ici1:ici2, k = 1:kz )
           if ( mo_atm%u(jde2,i,k) < d_zero ) then
-            mo_atm%w(jce2,i,k) = 0.1_rkx*mo_atm%w(jci2,i,k)
+            mo_atm%w(jce2,i,k) = 0.0_rkx
           else
             mo_atm%w(jce2,i,k) = mo_atm%w(jci2,i,k)
           end if
@@ -1782,17 +1785,14 @@ module mod_bdycod
           if ( present_qi .and. n == iqi ) cycle
           qxint = mo_atm%qx(j,ici1,k,n)
           if ( mo_atm%v(j,ide1,k) > d_zero ) then
-            mo_atm%qx(j,ice1,k,n) = 0.5_rkx*(qxbval(n)+qxint)
+            mo_atm%qx(j,ice1,k,n) = qxzeroval(n)
           else
             mo_atm%qx(j,ice1,k,n) = qxint
-          end if
-          if ( mo_atm%qx(j,ice1,k,n) < 1.0E-12_rkx ) then
-            mo_atm%qx(j,ice1,k,n) = 0.0_rkx
           end if
         end do
         do concurrent ( j = jce1:jce2, k = 1:kz )
           if ( mo_atm%v(j,ide1,k) > d_zero ) then
-            mo_atm%w(j,ice1,k) = 0.1_rkx*mo_atm%w(j,ici1,k)
+            mo_atm%w(j,ice1,k) = 0.0_rkx
           else
             mo_atm%w(j,ice1,k) = mo_atm%w(j,ici1,k)
           end if
@@ -1843,17 +1843,14 @@ module mod_bdycod
           if ( present_qi .and. n == iqi ) cycle
           qxint = mo_atm%qx(j,ici2,k,n)
           if ( mo_atm%v(j,ide2,k) < d_zero ) then
-            mo_atm%qx(j,ice2,k,n) = 0.5_rkx*(qxbval(n)+qxint)
+            mo_atm%qx(j,ice2,k,n) = qxzeroval(n)
           else
             mo_atm%qx(j,ice2,k,n) = qxint
-          end if
-          if ( mo_atm%qx(j,ice2,k,n) < 1.0E-12_rkx ) then
-            mo_atm%qx(j,ice2,k,n) = 0.0_rkx
           end if
         end do
         do concurrent ( j = jce1:jce2, k = 1:kz )
           if ( mo_atm%v(j,ide2,k) < d_zero ) then
-            mo_atm%w(j,ice2,k) = 0.1_rkx*mo_atm%w(j,ici2,k)
+            mo_atm%w(j,ice2,k) = 0.0_rkx
           else
             mo_atm%w(j,ice2,k) = mo_atm%w(j,ici2,k)
           end if
@@ -2375,7 +2372,7 @@ module mod_bdycod
               qxint = atm1%qx(jci1,i,k,n)
               windavg = wue(i,k) + wue(i+1,k) + wui(i,k) + wui(i+1,k)
               if ( windavg > d_zero ) then
-                atm1%qx(jce1,i,k,n) = qxbval(n)*sfs%psa(jce1,i)
+                atm1%qx(jce1,i,k,n) = qxzeroval(n)*sfs%psa(jce1,i)
               else
                 atm1%qx(jce1,i,k,n) = qxint
               end if
@@ -2393,7 +2390,7 @@ module mod_bdycod
               qxint = atm1%qx(jci2,i,k,n)
               windavg = eue(i,k) + eue(i+1,k) + eui(i,k) + eui(i+1,k)
               if ( windavg < d_zero ) then
-                atm1%qx(jce2,i,k,n) = qxbval(n)**sfs%psa(jce2,i)
+                atm1%qx(jce2,i,k,n) = qxzeroval(n)**sfs%psa(jce2,i)
               else
                 atm1%qx(jce2,i,k,n) = qxint
               end if
@@ -2411,7 +2408,7 @@ module mod_bdycod
               qxint = atm1%qx(j,ici1,k,n)
               windavg = sve(j,k) + sve(j+1,k) + svi(j,k) + svi(j+1,k)
               if ( windavg > d_zero ) then
-                atm1%qx(j,ice1,k,n) = qxbval(n)*sfs%psa(j,ice1)
+                atm1%qx(j,ice1,k,n) = qxzeroval(n)*sfs%psa(j,ice1)
               else
                 atm1%qx(j,ice1,k,n) = qxint
               end if
@@ -2429,7 +2426,7 @@ module mod_bdycod
               qxint = atm1%qx(j,ici2,k,n)
               windavg = nve(j,k) + nve(j+1,k) + nvi(j,k) + nvi(j+1,k)
               if ( windavg < d_zero ) then
-                atm1%qx(j,ice2,k,n) = qxbval(n)*sfs%psa(j,ice2)
+                atm1%qx(j,ice2,k,n) = qxzeroval(n)*sfs%psa(j,ice2)
               else
                 atm1%qx(j,ice2,k,n) = qxint
               end if
@@ -3968,7 +3965,6 @@ module mod_bdycod
     real(rkx), pointer, contiguous, intent(in), dimension(:,:,:) :: f
     type(bound_area), intent(in) :: ba
     real(rkx), intent(in) :: frac
-    real(rkx) :: x0, x1
     integer(ik4) :: i, j, k, ib
     real(rkx) :: xf
 #ifdef DEBUG
@@ -3983,9 +3979,6 @@ module mod_bdycod
 #endif
       return
     end if
-
-    x1 = (xbctime + dt)*rtb
-    x0 = 1.0_rkx - x1
 
     do concurrent ( j = j1:j2, i = i1:i2, k = 1:kz )
       ib = ba%ibnd(j,i)
@@ -4037,15 +4030,16 @@ module mod_bdycod
 #endif
   end subroutine morelax_external
 
-  subroutine setup_bdywt(mask,ba)
+  subroutine setup_bdywt(j1,j2,i1,i2,mask,ba)
     implicit none
+    integer(ik4), intent(in) :: j1, j2, i1, i2
     real(rkx), pointer, contiguous, intent(inout), dimension(:,:,:) :: mask
     type(bound_area), intent(in) :: ba
     integer(ik4) :: i, j, k, ib
-    do concurrent ( j = jci1:jci2, i = ici1:ici2, k = 1:kz )
+    do concurrent ( j = j1:j2, i = i1:i2, k = 1:kz )
       ib = ba%ibnd(j,i)
       if ( ib > 0 ) then
-        mask(j,i,k) = 1.0_rkx - hefc(nspgx-ib+1,kzp1-k)
+        mask(j,i,k) = 1.0_rkx - hefc(ib,k)
       else
         mask(j,i,k) = 1.0_rkx
       end if
@@ -4064,9 +4058,10 @@ module mod_bdycod
     x1 = (xbctime + dt)*rtb
     x0 = 1.0_rkx - x1
 
-    do concurrent ( j = jci1:jci2, i = ici1:ici2, k = 2:nztop )
-      xf = tnudge(k)*wrtau*dta
-      w(j,i,k) = (1.0_rkx - xf) * w(j,i,k) + xf * wfac * w(j,i,k)
+    do concurrent ( j = jci1:jci2, i = ici1:ici2 )
+      fext = wfac * w(j,i,2)
+      xf = wrtau * dta
+      w(j,i,2) = (1.0_rkx - xf) * w(j,i,2) + xf * fext
     end do
     do concurrent ( j = jci1:jci2, i = ici1:ici2, k = 1:nztop )
       fext = x0*xtb%b0(j,i,k) + x1*xtb%b1(j,i,k)
