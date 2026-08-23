@@ -4379,6 +4379,17 @@ module mod_ncout
     if ( present(ifile) ) jfile = ifile
     if ( jfile < 1 .or. jfile > outstream(istream)%nfiles ) then
       write (stderr,*) 'No such file in stream ',istream,' : ', ifile
+#ifdef DEBUG
+      ! Keep mod_service's cross-rank timer-label count symmetric with a
+      ! normal call (see the myid/=iocpu early-return above) -- this path
+      ! never reaches the gather/write/wait call sites below.
+      call time_begin(gather_name,gather_idx)
+      call time_end(gather_name,gather_idx)
+      call time_begin(write_name,write_idx)
+      call time_end(write_name,write_idx)
+      call time_begin(wait_name,wait_idx)
+      call time_end(wait_name,wait_idx)
+#endif
       return
     end if
 
@@ -4596,6 +4607,12 @@ module mod_ncout
     if ( present(ifile) ) jfile = ifile
     if ( jfile < 1 .or. jfile > outstream(istream)%nfiles ) then
       write (stderr,*) 'No such file in stream ',istream,' : ', ifile
+#ifdef DEBUG
+      call time_begin(gather_name,gather_idx)
+      call time_end(gather_name,gather_idx)
+      call time_begin(write_name,write_idx)
+      call time_end(write_name,write_idx)
+#endif
       return
     end if
 
@@ -4685,6 +4702,12 @@ module mod_ncout
     if ( present(ifile) ) jfile = ifile
     if ( jfile < 1 .or. jfile > outstream(istream)%nfiles ) then
       write (stderr,*) 'No such file in stream ',istream,' : ', ifile
+#ifdef DEBUG
+      call time_begin(gather_name,gather_idx)
+      call time_end(gather_name,gather_idx)
+      call time_begin(write_name,write_idx)
+      call time_end(write_name,write_idx)
+#endif
       return
     end if
 
