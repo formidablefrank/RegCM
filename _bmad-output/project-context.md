@@ -55,6 +55,7 @@ No CI pipeline (no `.github/workflows`), no linter/formatter config — style en
 - VS Code's `code` CLI isn't available here in the login node
 - When running Python scripts, load the Python module first using `module load python/3.11.7`
 - Consult the `$HPCDOCS` directory before searching the web for cluster-specific questions (modules, compilers, paths, policy)
+- If you encounter issues when compiling or building the program, consult official documentation and user forums from the web first so you have more information before solving the problem. Consider the versions of the compilers, libraries, technology stack, current environment, platform, infrastructure and build system in use.
 - Work occurs on a shared login node, subject to resource sharing and fair use policy; enforced limits prevent any single user from consuming the whole node
 - Confine login-node activity to planning and light tasks; submit larger job or long-running process as a Slurm job on compute nodes
 - Request conservative resource limits in Slurm job submissions. If walltime requested is at most 24 hours then set QoS to `normal`
@@ -130,6 +131,7 @@ No CI pipeline (no `.github/workflows`), no linter/formatter config — style en
 **Test Organization:**
 - No unit test framework at the model level (the one `pFUnit`-style unittest dir found is inside bundled third-party CLM3.5 code, not RegCM's own) — testing is full-model **integration runs**, driven by namelists
 - `Testing/` holds the fixture namelists: `test_001`–`016.in` (small regional domains), `ideal.in`/`ideal_profile.in` (idealized cases), `isc24.in`/`isc24_small.in`/`isc24_profile.in` (profiling/benchmark cases), `EUR12_namelist.in` (AD-8's canonical `$FAST` baseline fixture — a version-controlled reference copy of the domain/physics parameters, not a runnable copy: paths are `/set/this/to/where/...` placeholders), plus `Testing/CORDEX/*.namelist` (production-scale CORDEX domain configs, distinct from `EUR12_namelist.in`'s grid) and required input data (`RRTM_DATA/`, `CHEM_DATA/`)
+- If an input data is missing, try to download it from this [website](https://clima-dods.ictp.it/Users/ggiulian/transfer/EURR12/)
 
 **`regression_diff.py`/`manage_baseline.py` are the working, verified regression tools (Epic 1, 2026-08-19) — use them, not manual NCO/CDO, as the default:**
 - `Tools/Scripts/TestingAndBenchmarking/regression_diff.py --run-dir RUN --baseline-dir BASE [--nprocs 1,4,16,64,196] [--tolerance-file FILE]` compares NetCDF output field-by-field (MAD/RMSE/rMAD/rRMSE) against a trusted baseline; verified on real Slurm runs (bit-exact same-run, per-field tolerance override, malformed-input handling all confirmed at runtime, not just read from source)
