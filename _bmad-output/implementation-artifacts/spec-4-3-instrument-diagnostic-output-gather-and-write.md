@@ -2,7 +2,7 @@
 title: 'Instrument Diagnostic-Output Gather and Write'
 type: 'chore'
 created: '2026-08-21'
-status: 'in-review'
+status: 'done'
 review_loop_iteration: 0
 context: ['{project-root}/_bmad-output/project-context.md']
 baseline_commit: '6516f0252ea5c5074cc2d152fb49b86f37cc9e00'
@@ -117,3 +117,52 @@ baseline_commit: '6516f0252ea5c5074cc2d152fb49b86f37cc9e00'
 Once submitted, expected evidence: each leg's stdout should show the evolution-phase `time_print` table (unconditionally called from `mod_regcm_interface.F90:338`, no `debug_level` namelist tuning needed) with `io_gather_hist`/`io_write_hist`/`io_wait_hist` as separate populated rows (the serial leg should show `io_gather_hist` with a nonzero call count; the two parallel legs should not, since `io_gather_hist` only wraps the `.not. parallel_out` branch).
 
 **Runtime verification status (2026-08-23, final for this story):** Serial path and async-netcdf path both runtime-verified — see the 2026-08-22/23 Spec Change Log entries for the full crash-chase detail. Job 53743960 (serial, `bin/regcm-4-3-debug-nvhpc`): plain `ntr=0` baseline, ran cleanly through 3 real simulated hours, `io_gather_hist`/`io_write_hist`/`io_wait_hist` populated with sane nonzero values at every write event. Job 53804314 (async-netcdf, `bin/regcm-4-3-debug-nvhpc-async`, rebuilt with the same fixes): ran cleanly through 4 output writes, identical timer population, `io_wait_hist`'s near-zero average consistent with AC #2's enqueue-latency characterization. PnetCDF-parallel: code-inspection-only, per the existing Tasks entry (`mod_savefile.F90` cannot compile with `--enable-pnetcdf` on this toolchain, unrelated pre-existing issue). HDF5-parallel: **not runtime-verified** — hung on its one attempted exercise; tracked as a separate open item in `deferred-work.md`, not blocking this story's own instrumentation correctness (the `io_gather_hist`/`io_write_hist`/`io_wait_hist` call sites are identical code on that branch, only the underlying `NETCDF4_HDF5` write path itself is unverified).
+
+## Suggested Review Order
+
+**Per-call timer wraps (the core deliverable)**
+
+- Entry point: the three tight per-call wraps that give AC #1 genuinely separated gather/write/wait numbers.
+  [`mod_ncout.F90:4409`](../../Main/mpplib/mod_ncout.F90#L4409)
+
+- `io_gather_hist` wraps only `grid_collect`, inside each per-type branch so a `cycle` can't skip the matching `time_end`.
+  [`mod_ncout.F90:4443`](../../Main/mpplib/mod_ncout.F90#L4443)
+
+- `io_write_hist` wraps only `outstream_writevar`.
+  [`mod_ncout.F90:4520`](../../Main/mpplib/mod_ncout.F90#L4520)
+
+- `io_wait_hist` wraps only `outstream_sync`'s enqueue call — documented as enqueue latency, not blocking completion.
+  [`mod_ncout.F90:4556`](../../Main/mpplib/mod_ncout.F90#L4556)
+
+**Cross-rank symmetric registration (mod_service's `time_print` fatals if any rank's timer-label count differs)**
+
+- Non-I/O-rank early return: real gather work still happens here, but write/wait never do — registers a truthful zero-time pair.
+  [`mod_ncout.F90:4367`](../../Main/mpplib/mod_ncout.F90#L4367)
+
+- `jfile`-invalid early return (this review's own patch): previously skipped all three timers entirely, now registers all three at zero.
+  [`mod_ncout.F90:4386`](../../Main/mpplib/mod_ncout.F90#L4386)
+
+- Same `jfile`-invalid fix, `writevar2d_output_stream`.
+  [`mod_ncout.F90:4611`](../../Main/mpplib/mod_ncout.F90#L4611)
+
+- Same `jfile`-invalid fix, `writevar3d_output_stream`.
+  [`mod_ncout.F90:4706`](../../Main/mpplib/mod_ncout.F90#L4706)
+
+**`writevar2d`/`writevar3d` direct wraps (slab-ocean stream, not looped)**
+
+- Single-variable gather/write wrap, mirrors the main loop's pattern without the loop.
+  [`mod_ncout.F90:4592`](../../Main/mpplib/mod_ncout.F90#L4592)
+
+- Same pattern, 3D variant.
+  [`mod_ncout.F90:4687`](../../Main/mpplib/mod_ncout.F90#L4687)
+
+**Supporting bugfixes that unblocked runtime verification (not diagnostic-I/O code, kept because the serial-path evidence depends on them)**
+
+- `-Mbounds` false-positive on a genuinely valid zero-extent `ktrac` dimension; output-neutral padding.
+  [`mod_cu_tiedtke.F90:167`](../../Main/cumlib/mod_cu_tiedtke.F90#L167)
+
+- Same `-Mbounds` false-positive pattern, a zero-extent pointer remap.
+  [`mod_memutil.F90:2117`](../../Share/mod_memutil.F90#L2117)
+
+- Pre-existing unguarded tracer index, now matches every other call site's guard.
+  [`mod_che_drydep.F90:865`](../../Main/chemlib/mod_che_drydep.F90#L865)
