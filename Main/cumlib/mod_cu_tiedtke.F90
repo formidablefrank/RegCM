@@ -155,8 +155,17 @@ module mod_cu_tiedtke
     call getmem(pmfu,1,nipoi,1,kz,'mod_cu_tiedtke:pmfu')
     call getmem(xpg,1,nipoi,1,kz,'mod_cu_tiedtke:xpg')
     call getmem(xpgh,1,nipoi,1,kz+1,'mod_cu_tiedtke:xpgh')
-    call getmem(pxtm1,1,nipoi,1,kz,1,ntr,'mod_cu_tiedtke:pxtm1')
-    call getmem(pxtte,1,nipoi,1,kz,1,ntr,'mod_cu_tiedtke:pxtte')
+    ! Pad the tracer dimension to a minimum size of 1: with ntr=0 (no
+    ! chemistry), a true zero-extent array passed as an explicit-shape
+    ! actual argument to cucall's pxtm1(kbdim,klev,ktrac) trips an NVHPC
+    ! -Mbounds crash ("Subscript out of range... upper bound=0") at the
+    ! call site. ntr itself (the real tracer count, still possibly 0) is
+    ! unchanged and is what's actually passed as cucall's ktrac argument,
+    ! so all do-concurrent(jt=1:ktrac) tracer loops inside cucall still
+    ! correctly process zero tracers when ntr=0 -- this only pads the
+    ! unused backing storage, it cannot change output for any ntr.
+    call getmem(pxtm1,1,nipoi,1,kz,1,max(ntr,1),'mod_cu_tiedtke:pxtm1')
+    call getmem(pxtte,1,nipoi,1,kz,1,max(ntr,1),'mod_cu_tiedtke:pxtte')
     call getmem(ilab,1,nipoi,1,kz,'mod_cu_tiedtke:ilab')
     call getmem(ktype,1,nipoi,'mod_cu_tiedtke:ktype')
     call getmem(ptm1,1,nipoi,1,kz,'mod_cu_tiedtke:ptm1')

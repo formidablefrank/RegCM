@@ -2109,6 +2109,15 @@ module mod_memutil
       nullify(b)
       return
     end if
+    ! A zero-extent a (e.g. mod_che_common's idust with nbin=0, as with any
+    ! non-dust chemsimtype) trips an NVHPC -Mbounds false positive on the
+    ! explicit lbound/ubound remap below ("Subscript out of range ... upper
+    ! bound=0"). Plain pointer assignment carries a's bounds unchanged and
+    ! is equivalent for this case, without going through that remap syntax.
+    if ( size(a) == 0 ) then
+      b => a
+      return
+    end if
     b(lbound(a,1):ubound(a,1)) => a
   end subroutine assignp1d_i
 

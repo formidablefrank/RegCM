@@ -859,7 +859,10 @@ module mod_che_drydep
         drydepvg(jci1:jci2,io3)   =  vdg(4,jci1:jci2)!*0.5
         drydepvg(jci1:jci2,ih2o2) =  vdg(5,jci1:jci2)!*0.5
         drydepvg(jci1:jci2,ihno3) =  vdg(6,jci1:jci2)!*0.5
-        drydepvg(jci1:jci2,inh3)  =  vdg(9,jci1:jci2)!*0.5
+        ! inh3 stays 0 for chemsimtypes with no NH3 tracer (e.g. CBMZ, per
+        ! the comment in mod_che_common.F90:chem_config); every other inh3
+        ! use site in chemlib already guards it the same way.
+        if ( inh3 > 0 ) drydepvg(jci1:jci2,inh3)  =  vdg(9,jci1:jci2)!*0.5
         drydepvg(jci1:jci2,ipan)  =  vdg(10,jci1:jci2)!*0.5
         drydepvg(jci1:jci2,ihcho) =  vdg(14,jci1:jci2)!*0.5
         drydepvg(jci1:jci2,iald2) =  vdg(15,jci1:jci2)!*0.5
