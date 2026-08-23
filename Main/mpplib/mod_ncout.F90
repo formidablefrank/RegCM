@@ -4320,29 +4320,41 @@ module mod_ncout
     if ( .not. parallel_out .and. myid /= iocpu ) then
       do ivar = 1, outstream(istream)%nvar
         vp => outstream(istream)%ncvars%vlist(ivar)%vp
-#ifdef DEBUG
-        call time_begin(gather_name,gather_idx)
-#endif
         select type(vp)
           type is (ncvariable2d_mixed)
             if ( .not. vp%lrecords ) cycle
             tmp2d => vp%rval
+#ifdef DEBUG
+            call time_begin(gather_name,gather_idx)
+#endif
             call grid_collect(tmp2d,pnt2d,vp%j1,vp%j2,vp%i1,vp%i2)
+#ifdef DEBUG
+            call time_end(gather_name,gather_idx)
+#endif
           type is (ncvariable3d_mixed)
             if ( .not. vp%lrecords ) cycle
             tmp3d => vp%rval
+#ifdef DEBUG
+            call time_begin(gather_name,gather_idx)
+#endif
             call grid_collect(tmp3d,pnt3d,vp%j1,vp%j2,vp%i1,vp%i2,vp%k1,vp%k2)
+#ifdef DEBUG
+            call time_end(gather_name,gather_idx)
+#endif
           type is (ncvariable4d_mixed)
             if ( .not. vp%lrecords ) cycle
             tmp4d => vp%rval
+#ifdef DEBUG
+            call time_begin(gather_name,gather_idx)
+#endif
             call grid_collect(tmp4d,pnt4d,vp%j1,vp%j2, &
                               vp%i1,vp%i2,vp%k1,vp%k2,vp%n1,vp%n2)
+#ifdef DEBUG
+            call time_end(gather_name,gather_idx)
+#endif
           class default
             cycle
         end select
-#ifdef DEBUG
-        call time_end(gather_name,gather_idx)
-#endif
       end do
 
 #ifdef DEBUG
@@ -4397,14 +4409,17 @@ module mod_ncout
       ! If not parallel output, collect data
 
       if ( .not. parallel_out ) then
-#ifdef DEBUG
-        call time_begin(gather_name,gather_idx)
-#endif
         select type(vp)
           type is (ncvariable2d_mixed)
             if ( .not. vp%lrecords ) cycle
             tmp2d => vp%rval
+#ifdef DEBUG
+            call time_begin(gather_name,gather_idx)
+#endif
             call grid_collect(tmp2d,pnt2d,vp%j1,vp%j2,vp%i1,vp%i2)
+#ifdef DEBUG
+            call time_end(gather_name,gather_idx)
+#endif
             vp%j1 = outstream(istream)%jg1
             vp%j2 = outstream(istream)%jg2
             vp%i1 = outstream(istream)%ig1
@@ -4413,7 +4428,13 @@ module mod_ncout
           type is (ncvariable3d_mixed)
             if ( .not. vp%lrecords ) cycle
             tmp3d => vp%rval
+#ifdef DEBUG
+            call time_begin(gather_name,gather_idx)
+#endif
             call grid_collect(tmp3d,pnt3d,vp%j1,vp%j2,vp%i1,vp%i2,vp%k1,vp%k2)
+#ifdef DEBUG
+            call time_end(gather_name,gather_idx)
+#endif
             vp%j1 = outstream(istream)%jg1
             vp%j2 = outstream(istream)%jg2
             vp%i1 = outstream(istream)%ig1
@@ -4422,8 +4443,14 @@ module mod_ncout
           type is (ncvariable4d_mixed)
             if ( .not. vp%lrecords ) cycle
             tmp4d => vp%rval
+#ifdef DEBUG
+            call time_begin(gather_name,gather_idx)
+#endif
             call grid_collect(tmp4d,pnt4d,vp%j1,vp%j2, &
                               vp%i1,vp%i2,vp%k1,vp%k2,vp%n1,vp%n2)
+#ifdef DEBUG
+            call time_end(gather_name,gather_idx)
+#endif
             vp%j1 = outstream(istream)%jg1
             vp%j2 = outstream(istream)%jg2
             vp%i1 = outstream(istream)%ig1
@@ -4432,9 +4459,6 @@ module mod_ncout
           class default
             cycle
         end select
-#ifdef DEBUG
-        call time_end(gather_name,gather_idx)
-#endif
       else
         select type(vp)
           type is (ncvariable2d_mixed)
