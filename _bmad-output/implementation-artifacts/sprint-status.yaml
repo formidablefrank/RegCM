@@ -76,7 +76,7 @@ development_status:
   epic-4: in-progress
   4-1-instrument-rrtmgs-compute-core: done
   4-2-instrument-kpp-chemistry-integration: done
-  4-3-instrument-diagnostic-output-gather-and-write: review
+  4-3-instrument-diagnostic-output-gather-and-write: done
   4-4-baseline-profiling-run-and-published-report: backlog
   4-5-long-running-memory-growth-investigation: backlog
   4-6-valgrind-memory-leak-and-error-check: backlog
